@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
@@ -9,6 +10,8 @@ from config import GEMINI_API_KEY, GEMINI_MODEL
 from scraper import VehicleListing, download_images
 
 logger = logging.getLogger(__name__)
+logging.getLogger("google_genai").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 class VisionAnalysisResult(BaseModel):
@@ -118,7 +121,7 @@ Evaluate the provided vehicle photos against these STRICT rules:
 
 
 class GeminiVisionAnalyzer:
-    """Analyzes vehicle listing images with Gemini 2.5 Flash using google-genai SDK."""
+    """Analyzes vehicle listing images with Gemini Flash using google-genai SDK."""
 
     def __init__(self, api_key: str = GEMINI_API_KEY, model_name: str = GEMINI_MODEL) -> None:
         if not api_key or api_key == "your_gemini_api_key_here":
@@ -128,6 +131,55 @@ class GeminiVisionAnalyzer:
             )
         self.client = genai.Client(api_key=api_key)
         self.model_name = model_name
+        self._tried_models = {model_name}
+
+    def _select_fallback_model(self, error_text: str) -> Optional[str]:
+        """
+        If the current Gemini model returns 404 NOT_FOUND, extract the suggested model
+        from the API error or query client.models.list() for an available Flash model.
+        """
+        # 1. Check if the 404 message explicitly recommends a model
+        match = re.search(r"use models/([a-zA-Z0-9._-]+)", error_text)
+        if match:
+            suggested = match.group(1)
+            if suggested not in self._tried_models:
+                self._tried_models.add(suggested)
+                return suggested
+
+        # 2. Query available models from the API key
+        try:
+            available_flash = []
+            for m in self.client.models.list():
+                name = (getattr(m, "name", "") or "").replace("models/", "")
+                if (
+                    "gemini" in name
+                    and "flash" in name
+                    and "tts" not in name
+                    and "image" not in name
+                    and "thinking" not in name
+                    and name not in self._tried_models
+                ):
+                    available_flash.append(name)
+            if available_flash:
+                # Sort descending so newest generation flash model is chosen first
+                available_flash.sort(reverse=True)
+                chosen = available_flash[0]
+                self._tried_models.add(chosen)
+                return chosen
+        except Exception as exc:
+            logger.debug("Could not list Gemini models: %s", exc)
+
+        # 3. Static fallback list
+        for candidate in (
+            "gemini-3.8-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-2.0-flash",
+        ):
+            if candidate not in self._tried_models:
+                self._tried_models.add(candidate)
+                return candidate
+
+        return None
 
     def analyze_listing(self, listing: VehicleListing) -> Optional[VisionAnalysisResult]:
         """Download listing images and run Gemini Vision evaluation with Free Tier retry support."""
@@ -162,7 +214,7 @@ class GeminiVisionAnalyzer:
                 )
             )
 
-        max_attempts = 3
+        max_attempts = 4
         for attempt in range(1, max_attempts + 1):
             try:
                 logger.info(
@@ -204,6 +256,17 @@ class GeminiVisionAnalyzer:
 
             except Exception as exc:
                 err_str = str(exc)
+                if ("404" in err_str or "NOT_FOUND" in err_str) and attempt < max_attempts:
+                    fallback = self._select_fallback_model(err_str)
+                    if fallback:
+                        logger.warning(
+                            "[Gemini] Model '%s' returned 404. Switching automatically to '%s'...",
+                            self.model_name,
+                            fallback,
+                        )
+                        self.model_name = fallback
+                        continue
+
                 if ("429" in err_str or "RESOURCE_EXHAUSTED" in err_str) and attempt < max_attempts:
                     wait_sec = 15 * attempt
                     logger.warning(
