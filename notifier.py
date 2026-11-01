@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 import requests
 
 from analyzer import VisionAnalysisResult
@@ -8,19 +9,42 @@ from scraper import VehicleListing
 logger = logging.getLogger(__name__)
 
 
+def _discover_chat_id_from_updates(bot_token: str) -> Optional[str]:
+    """
+    Query Telegram getUpdates API to automatically find the chat_id of the user
+    who most recently messaged the bot (e.g., sent /start).
+    """
+    try:
+        url = f"https://api.telegram.org/bot{bot_token}/getUpdates"
+        resp = requests.get(url, timeout=10)
+        if not resp.ok:
+            return None
+        data = resp.json()
+        results = data.get("result", [])
+        for update in reversed(results):
+            for key in ("message", "edited_message", "my_chat_member", "channel_post"):
+                msg = update.get(key)
+                if isinstance(msg, dict) and "chat" in msg and "id" in msg["chat"]:
+                    discovered = str(msg["chat"]["id"])
+                    logger.info(
+                        "[Telegram] Automatycznie wykryto prawidłowe TELEGRAM_CHAT_ID z getUpdates: %s",
+                        discovered,
+                    )
+                    return discovered
+    except Exception as exc:
+        logger.debug("[Telegram] Nie udało się pobrać getUpdates: %s", exc)
+    return None
+
+
 def send_telegram_alert(listing: VehicleListing, analysis: VisionAnalysisResult) -> bool:
     """
     Send a Telegram message when a vehicle passes inspection.
-    Silently skips if TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is not configured.
+    If TELEGRAM_CHAT_ID is invalid or returns 'chat not found', automatically
+    queries /getUpdates to find the user's active chat with the bot.
     """
-    if (
-        not TELEGRAM_BOT_TOKEN
-        or TELEGRAM_BOT_TOKEN == "your_telegram_bot_token_here"
-        or not TELEGRAM_CHAT_ID
-        or TELEGRAM_CHAT_ID == "your_telegram_chat_id_here"
-    ):
+    if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "your_telegram_bot_token_here":
         logger.info(
-            "[Telegram] Pominięto wysyłkę na Telegram (brak TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID) — auto zapisane w logach i podsumowaniu."
+            "[Telegram] Pominięto wysyłkę na Telegram (brak TELEGRAM_BOT_TOKEN) — auto zapisane w logach."
         )
         return False
 
@@ -41,21 +65,48 @@ def send_telegram_alert(listing: VehicleListing, analysis: VisionAnalysisResult)
     )
 
     api_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    chat_id = (
+        TELEGRAM_CHAT_ID
+        if (TELEGRAM_CHAT_ID and TELEGRAM_CHAT_ID != "your_telegram_chat_id_here")
+        else _discover_chat_id_from_updates(TELEGRAM_BOT_TOKEN)
+    )
+
+    if not chat_id:
+        logger.error(
+            "[Telegram] Brak TELEGRAM_CHAT_ID oraz brak wiadomości w getUpdates! "
+            "Wejdź na Telegramie w rozmowę ze swoim botem, kliknij START (wyślij mu np. 'hej') i uruchom ponownie."
+        )
+        return False
+
     payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
+        "chat_id": chat_id,
         "text": message,
         "disable_web_page_preview": False,
     }
 
     try:
         response = requests.post(api_url, json=payload, timeout=10)
+        if not response.ok and "chat not found" in response.text.lower():
+            logger.warning(
+                "[Telegram] Podane TELEGRAM_CHAT_ID (%s) zwróciło 'chat not found'. "
+                "Próbuję automatycznie wykryć Twoje ID czatu z getUpdates...",
+                chat_id,
+            )
+            discovered_id = _discover_chat_id_from_updates(TELEGRAM_BOT_TOKEN)
+            if discovered_id and discovered_id != str(chat_id):
+                payload["chat_id"] = discovered_id
+                response = requests.post(api_url, json=payload, timeout=10)
+
         if not response.ok:
             logger.error(
-                "[Telegram] Błąd wysyłania powiadomienia (%s): %s",
+                "[Telegram] Błąd wysyłania powiadomienia (%s): %s -> "
+                "WAŻNE: Otwórz swojego bota w aplikacji Telegram, kliknij przycisk START (wyślij mu dowolną wiadomość np. 'start') "
+                "i sprawdź czy TELEGRAM_CHAT_ID to Twój numer ID użytkownika (np. z @userinfobot).",
                 response.status_code,
                 response.text,
             )
             return False
+
         logger.info(
             "📨 [Telegram] Wysłano powiadomienie dla %s Lot #%s (%s)",
             listing.source,

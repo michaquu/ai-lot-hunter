@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Set
 
-from analyzer import GeminiVisionAnalyzer
+from analyzer import GeminiVisionAnalyzer, VisionAnalysisResult
 from config import (
     HEADLESS,
     MAX_AGE_HOURS,
@@ -13,8 +13,8 @@ from config import (
     MAX_LISTINGS_PER_SOURCE,
     SEEN_LOTS_FILE,
 )
-from notifier import notify_result
-from scraper import AuctionScraper
+from notifier import notify_result, send_telegram_alert
+from scraper import AuctionScraper, VehicleListing
 
 logging.basicConfig(
     level=logging.INFO,
@@ -91,11 +91,67 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Re-analyze listings even if they are recorded in seen_lots.json",
     )
+    parser.add_argument(
+        "--test-telegram",
+        action="store_true",
+        help="Send a test notification to Telegram and exit immediately",
+    )
     return parser.parse_args()
 
 
 async def run_pipeline() -> None:
     args = parse_args()
+
+    if args.test_telegram:
+        logger.info("Wysyłanie testowego powiadomienia na Telegram (wraz z 2 autami znalezionymi dzisiaj)...")
+        sample_cars = [
+            (
+                VehicleListing(
+                    source="Copart",
+                    lot_id="71903086",
+                    url="https://www.copart.com/lot/71903086",
+                    title="2019 DODGE CHALLENGER SXT",
+                ),
+                VisionAnalysisResult(
+                    decision="PASS",
+                    identified_color="Pitch Black",
+                    color_approved=True,
+                    is_modified=False,
+                    airbags_deployed=False,
+                    structural_or_beam_damage=False,
+                    damage_approved=True,
+                    damage_assessment=(
+                        "Damage is limited to bolt-on components (front bumper cover, passenger headlight, "
+                        "passenger front fender). Cooling pack and radiator support are straight, airbags intact."
+                    ),
+                ),
+            ),
+            (
+                VehicleListing(
+                    source="IAAI",
+                    lot_id="46932215",
+                    url="https://www.iaai.com/VehicleDetail/46932215~US",
+                    title="2023 DODGE CHALLENGER SXT",
+                ),
+                VisionAnalysisResult(
+                    decision="PASS",
+                    identified_color="Granite Gray",
+                    color_approved=True,
+                    is_modified=False,
+                    airbags_deployed=False,
+                    structural_or_beam_damage=False,
+                    damage_approved=True,
+                    damage_assessment=(
+                        "Side impact damage affecting right front fender and passenger door; "
+                        "airbags are intact and no major structural or frame rail damage visible."
+                    ),
+                ),
+            ),
+        ]
+        for listing, res in sample_cars:
+            send_telegram_alert(listing, res)
+        return
+
     headless_mode = False if args.headful else args.headless
     sources = ["copart", "iaai"] if args.source == "all" else [args.source]
     seen_lots = set() if args.ignore_seen else load_seen_lots()

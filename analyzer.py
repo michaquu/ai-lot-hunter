@@ -118,14 +118,13 @@ Evaluate the provided vehicle photos against these STRICT rules:
    - Otherwise, return `decision = "REJECT"`.
 """
 
-# Proven standard Vision Flash models available on the API key (excluding omni/live/preview audio models)
+# Proven fast Vision Flash models available on the API key (ordered by speed & reliability)
 FALLBACK_MODELS = [
-    "gemini-3.8-flash-lite",
-    "gemini-3.8-flash",
-    "gemini-3.7-flash",
+    "gemini-3.5-flash-lite",
     "gemini-3.6-flash",
     "gemini-3.5-flash",
-    "gemini-3.5-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-3.7-flash",
 ]
 
 

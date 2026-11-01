@@ -15,6 +15,7 @@ on:
         options:
           - analyze
           - mark_existing_seen
+          - test_telegram
       limit:
         description: "Maksymalna liczba najnowszych aut na serwis"
         required: true
@@ -43,6 +44,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Install Playwright Chromium & Xvfb virtual display
+        if: github.event.inputs.mode != 'test_telegram'
         run: |
           playwright install --with-deps chromium
           sudo apt-get update && sudo apt-get install -y xvfb
@@ -56,7 +58,9 @@ jobs:
           LIMIT="${{ github.event.inputs.limit || '10' }}"
           MODE="${{ github.event.inputs.mode || 'analyze' }}"
 
-          if [ "$MODE" = "mark_existing_seen" ]; then
+          if [ "$MODE" = "test_telegram" ]; then
+            python main.py --test-telegram
+          elif [ "$MODE" = "mark_existing_seen" ]; then
             xvfb-run --auto-servernum --server-args="-screen 0 1440x900x24" \
               python main.py --headful --mark-existing-seen
           else
@@ -65,7 +69,7 @@ jobs:
           fi
 
       - name: Save updated seen_lots.json to repository
-        if: always()
+        if: always() && github.event.inputs.mode != 'test_telegram'
         run: |
           cp seen_lots.json /tmp/seen_lots_run.json
           git config user.name "github-actions[bot]"
