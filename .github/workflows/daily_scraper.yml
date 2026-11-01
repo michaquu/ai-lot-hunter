@@ -1,0 +1,77 @@
+name: Daily Copart & IAAI Challenger Scraper
+
+on:
+  schedule:
+    # Uruchamia się codziennie o 08:00 UTC (09:00 zimą / 10:00 latem czasu polskiego)
+    - cron: "0 8 * * *"
+
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Tryb uruchomienia"
+        required: true
+        default: "analyze"
+        type: choice
+        options:
+          - analyze
+          - mark_existing_seen
+      limit:
+        description: "Maksymalna liczba najnowszych aut na serwis"
+        required: true
+        default: "10"
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  scrape-and-analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright Chromium & Xvfb virtual display
+        run: |
+          playwright install --with-deps chromium
+          sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: Run Scraper & Gemini Vision Analyzer
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          LIMIT="${{ github.event.inputs.limit || '10' }}"
+          MODE="${{ github.event.inputs.mode || 'analyze' }}"
+
+          if [ "$MODE" = "mark_existing_seen" ]; then
+            xvfb-run --auto-servernum --server-args="-screen 0 1440x900x24" \
+              python main.py --headful --mark-existing-seen
+          else
+            xvfb-run --auto-servernum --server-args="-screen 0 1440x900x24" \
+              python main.py --headful --only-today --limit "$LIMIT"
+          fi
+
+      - name: Save updated seen_lots.json to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add seen_lots.json
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: update seen_lots.json [skip ci]"
+            git push
+          else
+            echo "Brak nowych wpisów w seen_lots.json"
+          fi

@@ -1,0 +1,13 @@
+# Environment variables
+.env
+
+# Python virtual environments & cache
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Scraper debug artifacts
+debug_screenshots/
+browser_profile/
