@@ -67,13 +67,24 @@ jobs:
       - name: Save updated seen_lots.json to repository
         if: always()
         run: |
+          cp seen_lots.json /tmp/seen_lots_run.json
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout -B main origin/main
+          python -c '
+          import json, pathlib
+          p_repo = pathlib.Path("seen_lots.json")
+          p_run = pathlib.Path("/tmp/seen_lots_run.json")
+          s_repo = set(json.loads(p_repo.read_text())) if p_repo.exists() else set()
+          s_run = set(json.loads(p_run.read_text())) if p_run.exists() else set()
+          merged = sorted(s_repo | s_run)
+          p_repo.write_text(json.dumps(merged, indent=2) + "\n")
+          '
           git add seen_lots.json
           if ! git diff --staged --quiet; then
-            git pull --rebase origin main || true
             git commit -m "chore: update seen_lots.json [skip ci]"
-            git push
+            git push origin HEAD:main
           else
             echo "Brak nowych wpisów w seen_lots.json"
           fi
