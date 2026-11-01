@@ -133,26 +133,14 @@ async def run_pipeline() -> None:
         max_age_hours=MAX_AGE_HOURS if args.only_today else None,
     )
 
-    logger.info(
-        "Starting scraper (sources=%s, newest_limit=%d, only_today=%s, headless=%s)...",
-        sources,
-        args.limit,
-        args.only_today,
-        headless_mode,
-    )
-    listings = await scraper.scrape_all(sources=sources, seen_lot_ids=seen_lots)
-
-    if not listings:
-        logger.info("No new vehicle listings found since last check.")
-        return
-
     passed_matches = []
     rejected_count = 0
 
-    for listing in listings:
+    def process_listing_immediately(listing) -> None:
+        nonlocal rejected_count
         result = analyzer.analyze_listing(listing)
         if result is None:
-            continue
+            return
 
         notify_result(listing, result)
 
@@ -165,17 +153,36 @@ async def run_pipeline() -> None:
         else:
             rejected_count += 1
 
-    print("\n" + "#" * 72)
+    logger.info(
+        "Starting scraper (sources=%s, newest_limit=%d, only_today=%s, headless=%s)...",
+        sources,
+        args.limit,
+        args.only_today,
+        headless_mode,
+    )
+    listings = await scraper.scrape_all(
+        sources=sources,
+        seen_lot_ids=seen_lots,
+        on_listing_ready=process_listing_immediately,
+    )
+
+    if not listings:
+        logger.info("No new vehicle listings found since last check.")
+        return
+
+    print("\n" + "#" * 72, flush=True)
     print(
         f"RUN SUMMARY: Inspected {len(listings)} newest listing(s) | "
-        f"✅ PASS: {len(passed_matches)} | ❌ REJECT: {rejected_count}"
+        f"✅ PASS: {len(passed_matches)} | ❌ REJECT: {rejected_count}",
+        flush=True,
     )
     for listing, res in passed_matches:
         mods_tag = f" | 🔥 MODS: {res.modifications_detected}" if res.is_modified else ""
         print(
-            f"  -> [{listing.source}] {listing.url} | {res.identified_color}{mods_tag} | {res.damage_assessment}"
+            f"  -> [{listing.source}] {listing.url} | {res.identified_color}{mods_tag} | {res.damage_assessment}",
+            flush=True,
         )
-    print("#" * 72 + "\n")
+    print("#" * 72 + "\n", flush=True)
 
 
 if __name__ == "__main__":

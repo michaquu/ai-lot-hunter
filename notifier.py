@@ -19,7 +19,9 @@ def send_telegram_alert(listing: VehicleListing, analysis: VisionAnalysisResult)
         or not TELEGRAM_CHAT_ID
         or TELEGRAM_CHAT_ID == "your_telegram_chat_id_here"
     ):
-        logger.debug("Telegram credentials not configured; skipping Telegram push alert.")
+        logger.info(
+            "[Telegram] Pominięto wysyłkę na Telegram (brak TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID) — auto zapisane w logach i podsumowaniu."
+        )
         return False
 
     mods_line = (
@@ -49,48 +51,69 @@ def send_telegram_alert(listing: VehicleListing, analysis: VisionAnalysisResult)
     try:
         response = requests.post(api_url, json=payload, timeout=10)
         response.raise_for_status()
-        logger.info("[Telegram] Notification sent for %s Lot #%s", listing.source, listing.lot_id)
+        logger.info(
+            "📨 [Telegram] Wysłano powiadomienie dla %s Lot #%s (%s)",
+            listing.source,
+            listing.lot_id,
+            listing.url,
+        )
         return True
     except Exception as exc:
-        logger.error("[Telegram] Failed to send notification: %s", exc)
+        logger.error("[Telegram] Błąd wysyłania powiadomienia: %s", exc)
         return False
 
 
 def notify_result(listing: VehicleListing, analysis: VisionAnalysisResult) -> None:
     """
-    Print terminal evaluation summary and trigger a PASS notification (terminal + Telegram).
+    Log live evaluation result immediately (for GitHub Actions real-time logs)
+    and trigger Telegram alert when a car is selected (PASS).
     """
     divider = "=" * 72
     mods_info = (
-        f"TAK — {analysis.modifications_detected or 'Wykryto modyfikacje'}"
+        f"TAK ({analysis.modifications_detected or 'Wykryto modyfikacje'})"
         if analysis.is_modified
         else "Nie (seria)"
     )
 
     if analysis.decision == "PASS":
-        badge = (
-            "🔥 [PASS - TUNING/MODIFIED EXCEPTION]"
+        pass_type = (
+            "🔥 WYBRANO DO WYSŁANIA (TUNING/MODYFIKACJE)"
             if (analysis.is_modified and not analysis.color_approved)
-            else "🚨 [PASS]"
+            else "✅ WYBRANO DO WYSŁANIA (PASS)"
         )
-        print(f"\n{divider}")
-        print(f"{badge} QUALIFYING DODGE CHALLENGER FOUND ON {listing.source.upper()}!")
-        print(divider)
-        print(f"  Title             : {listing.title}")
-        print(f"  Listing URL       : {listing.url}")
-        print(f"  Identified Color  : {analysis.identified_color} (Color OK: {analysis.color_approved})")
-        print(f"  Modified / Tuning : {mods_info}")
-        print(f"  Damage Assessment : {analysis.damage_assessment}")
-        print(f"{divider}\n")
+        logger.info(
+            "%s | %s #%s | URL: %s | Kolor: %s | Tuning: %s | Stan: %s",
+            pass_type,
+            listing.source,
+            listing.lot_id,
+            listing.url,
+            analysis.identified_color,
+            mods_info,
+            analysis.damage_assessment,
+        )
+        print(
+            f"\n{divider}\n"
+            f"🚨 {pass_type}: {listing.source.upper()} #{listing.lot_id}\n"
+            f"{divider}\n"
+            f"  Title             : {listing.title}\n"
+            f"  Listing URL       : {listing.url}\n"
+            f"  Identified Color  : {analysis.identified_color} (Color OK: {analysis.color_approved})\n"
+            f"  Modified / Tuning : {mods_info}\n"
+            f"  Damage Assessment : {analysis.damage_assessment}\n"
+            f"{divider}\n",
+            flush=True,
+        )
         send_telegram_alert(listing, analysis)
     else:
-        print(
-            f"❌ [REJECT] {listing.source} #{listing.lot_id} ({listing.title})\n"
-            f"   URL               : {listing.url}\n"
-            f"   Color             : {analysis.identified_color} (Approved: {analysis.color_approved})\n"
-            f"   Modified / Tuning : {mods_info}\n"
-            f"   Airbags Deployed? : {analysis.airbags_deployed}\n"
-            f"   Heavy/Beam Crush? : {analysis.structural_or_beam_damage}\n"
-            f"   Damage Assessment : {analysis.damage_assessment}\n"
-            f"   Rejection Reason  : {analysis.rejection_reason or 'Did not meet strict color/damage criteria'}\n"
+        logger.info(
+            "❌ ODRZUCONO (REJECT) | %s #%s (%s) | Kolor: %s (OK=%s) | Tuning: %s | Poduszki: %s | Belka/Dzwon: %s | Powód: %s",
+            listing.source,
+            listing.lot_id,
+            listing.url,
+            analysis.identified_color,
+            analysis.color_approved,
+            mods_info,
+            analysis.airbags_deployed,
+            analysis.structural_or_beam_damage,
+            analysis.rejection_reason or analysis.damage_assessment,
         )

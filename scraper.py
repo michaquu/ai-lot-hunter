@@ -4,7 +4,7 @@ import logging
 import random
 import re
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
+from typing import Callable, Dict, List, Optional, Set
 from urllib.parse import urljoin
 
 import requests
@@ -588,11 +588,12 @@ class AuctionScraper:
         sources: Optional[List[str]] = None,
         seen_lot_ids: Optional[Set[str]] = None,
         search_only: bool = False,
+        on_listing_ready: Optional[Callable[[VehicleListing], None]] = None,
     ) -> List[VehicleListing]:
         """
         Run the scraper across Copart and IAAI, skipping already-seen lots,
         and populate image_urls for each discovered vehicle listing.
-        If search_only=True, only collects listings from search pages without visiting detail pages.
+        If on_listing_ready is provided, it is called immediately after each vehicle's images are extracted.
         """
         active_sources = [s.lower() for s in (sources or ["copart", "iaai"])]
         seen_ids = seen_lot_ids or set()
@@ -621,6 +622,8 @@ class AuctionScraper:
                         await self.extract_copart_images(context, listing)
                         if listing.image_urls:
                             populated_listings.append(listing)
+                            if on_listing_ready:
+                                on_listing_ready(listing)
                         await human_delay(1.5, 3.0)
 
                 if "iaai" in active_sources:
@@ -643,6 +646,8 @@ class AuctionScraper:
                         await self.extract_iaai_images(context, listing)
                         if listing.image_urls:
                             populated_listings.append(listing)
+                            if on_listing_ready:
+                                on_listing_ready(listing)
                         await human_delay(1.5, 3.0)
             finally:
                 await context.close()
