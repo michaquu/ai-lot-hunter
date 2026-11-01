@@ -25,32 +25,37 @@ def send_telegram_alert(listing: VehicleListing, analysis: VisionAnalysisResult)
         return False
 
     mods_line = (
-        f"🔥 *Przeróbki / Tuning:* TAK ({analysis.modifications_detected})\n"
+        f"🔥 Przeróbki / Tuning: TAK ({analysis.modifications_detected})\n"
         if analysis.is_modified
-        else "*Przeróbki / Tuning:* Brak (seria)\n"
+        else "Przeróbki / Tuning: Brak (seria)\n"
     )
 
     message = (
-        f"✅ *DODGE CHALLENGER MATCH ({listing.source})*\n\n"
-        f"*Title:* {listing.title}\n"
-        f"*Lot ID:* `{listing.lot_id}`\n"
-        f"*Identified Color:* {analysis.identified_color}\n"
+        f"✅ DODGE CHALLENGER MATCH ({listing.source})\n\n"
+        f"Title: {listing.title}\n"
+        f"Lot ID: {listing.lot_id}\n"
+        f"Identified Color: {analysis.identified_color}\n"
         f"{mods_line}"
-        f"*Damage Assessment:* {analysis.damage_assessment}\n\n"
-        f"🔗 [View Listing]({listing.url})"
+        f"Damage Assessment: {analysis.damage_assessment}\n\n"
+        f"🔗 Link: {listing.url}"
     )
 
     api_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": message,
-        "parse_mode": "Markdown",
         "disable_web_page_preview": False,
     }
 
     try:
         response = requests.post(api_url, json=payload, timeout=10)
-        response.raise_for_status()
+        if not response.ok:
+            logger.error(
+                "[Telegram] Błąd wysyłania powiadomienia (%s): %s",
+                response.status_code,
+                response.text,
+            )
+            return False
         logger.info(
             "📨 [Telegram] Wysłano powiadomienie dla %s Lot #%s (%s)",
             listing.source,
@@ -59,7 +64,7 @@ def send_telegram_alert(listing: VehicleListing, analysis: VisionAnalysisResult)
         )
         return True
     except Exception as exc:
-        logger.error("[Telegram] Błąd wysyłania powiadomienia: %s", exc)
+        logger.error("[Telegram] Błąd połączenia z Telegram API: %s", exc)
         return False
 
 

@@ -100,11 +100,11 @@ async def run_pipeline() -> None:
     sources = ["copart", "iaai"] if args.source == "all" else [args.source]
     seen_lots = set() if args.ignore_seen else load_seen_lots()
 
-    # If --mark-existing-seen is used, grab up to 100 current listings per source and save to seen_lots.json
+    # If --mark-existing-seen is used, grab up to 200 current listings per source and save to seen_lots.json
     if args.mark_existing_seen:
         scraper = AuctionScraper(
             headless=headless_mode,
-            max_listings=100,
+            max_listings=200,
             max_images=0,
         )
         logger.info("Creating baseline snapshot of existing listings (--mark-existing-seen)...")

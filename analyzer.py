@@ -232,6 +232,7 @@ class GeminiVisionAnalyzer:
                         temperature=0.1,
                         response_mime_type="application/json",
                         response_schema=VisionAnalysisResult,
+                        http_options=types.HttpOptions(timeout=90_000),
                     ),
                 )
 
@@ -267,10 +268,27 @@ class GeminiVisionAnalyzer:
                         self.model_name = fallback
                         continue
 
-                if ("429" in err_str or "RESOURCE_EXHAUSTED" in err_str) and attempt < max_attempts:
-                    wait_sec = 15 * attempt
+                if (
+                    any(
+                        code in err_str
+                        for code in (
+                            "429",
+                            "RESOURCE_EXHAUSTED",
+                            "503",
+                            "UNAVAILABLE",
+                            "500",
+                            "504",
+                            "DEADLINE_EXCEEDED",
+                            "timed out",
+                            "Timeout",
+                        )
+                    )
+                    and attempt < max_attempts
+                ):
+                    wait_sec = 10 * attempt
                     logger.warning(
-                        "[Gemini] Free Tier rate limit reached (429). Waiting %ds before retry %d/%d...",
+                        "[Gemini] Temporary API overload/limit (%s). Waiting %ds before retry %d/%d...",
+                        "503 UNAVAILABLE" if "503" in err_str else "Rate Limit/Timeout",
                         wait_sec,
                         attempt + 1,
                         max_attempts,
