@@ -28,7 +28,7 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 
 # Gemini Model Configuration (automatically falls back to newest available Flash model if 404)
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash-lite")
 
 # Scraper Settings
 HEADLESS = os.getenv("HEADLESS", "false").lower() in ("true", "1", "yes")
