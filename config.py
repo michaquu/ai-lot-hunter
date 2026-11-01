@@ -33,7 +33,7 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 # Scraper Settings
 HEADLESS = os.getenv("HEADLESS", "false").lower() in ("true", "1", "yes")
 MAX_LISTINGS_PER_SOURCE = int(os.getenv("MAX_LISTINGS_PER_SOURCE", "10"))
-MAX_IMAGES_PER_LISTING = int(os.getenv("MAX_IMAGES_PER_LISTING", "10"))
+MAX_IMAGES_PER_LISTING = int(os.getenv("MAX_IMAGES_PER_LISTING", "6"))
 MAX_AGE_HOURS = int(os.getenv("MAX_AGE_HOURS", "24"))
 SEEN_LOTS_FILE = "seen_lots.json"
 

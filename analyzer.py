@@ -131,58 +131,40 @@ class GeminiVisionAnalyzer:
             )
         self.client = genai.Client(api_key=api_key)
         self.model_name = model_name
-        self._tried_models = {model_name}
+        self.model_pool: List[str] = self._discover_models(preferred=model_name)
+        logger.info("[Gemini] Ready with model pool: %s", self.model_pool)
 
-    def _select_fallback_model(self, error_text: str) -> Optional[str]:
-        """
-        If the current Gemini model returns 404 NOT_FOUND, extract the suggested model
-        from the API error or query client.models.list() for an available Flash model.
-        """
-        # 1. Check if the 404 message explicitly recommends a model
-        match = re.search(r"use models/([a-zA-Z0-9._-]+)", error_text)
-        if match:
-            suggested = match.group(1)
-            if suggested not in self._tried_models:
-                self._tried_models.add(suggested)
-                return suggested
-
-        # 2. Query available models from the API key
+    def _discover_models(self, preferred: str) -> List[str]:
+        """Build an ordered list of available Gemini Flash models for automatic 503/404 rotation."""
+        pool: List[str] = [preferred]
         try:
-            available_flash = []
+            discovered: List[str] = []
             for m in self.client.models.list():
                 name = (getattr(m, "name", "") or "").replace("models/", "")
                 if (
                     "gemini" in name
                     and "flash" in name
-                    and "tts" not in name
-                    and "image" not in name
-                    and "thinking" not in name
-                    and name not in self._tried_models
+                    and not any(
+                        skip in name
+                        for skip in ("tts", "image", "thinking", "audio", "embedding", "2.5-flash")
+                    )
                 ):
-                    available_flash.append(name)
-            if available_flash:
-                # Sort descending so newest generation flash model is chosen first
-                available_flash.sort(reverse=True)
-                chosen = available_flash[0]
-                self._tried_models.add(chosen)
-                return chosen
+                    discovered.append(name)
+            # Sort so newer models and lite variants are available as fast fallbacks
+            discovered.sort(reverse=True)
+            for name in discovered:
+                if name not in pool:
+                    pool.append(name)
         except Exception as exc:
             logger.debug("Could not list Gemini models: %s", exc)
 
-        # 3. Static fallback list
-        for candidate in (
-            "gemini-3.8-flash",
-            "gemini-2.5-flash-lite",
-            "gemini-2.0-flash",
-        ):
-            if candidate not in self._tried_models:
-                self._tried_models.add(candidate)
-                return candidate
-
-        return None
+        for fallback in ("gemini-3.8-flash-lite", "gemini-3.8-flash", "gemini-2.0-flash"):
+            if fallback not in pool:
+                pool.append(fallback)
+        return pool
 
     def analyze_listing(self, listing: VehicleListing) -> Optional[VisionAnalysisResult]:
-        """Download listing images and run Gemini Vision evaluation with Free Tier retry support."""
+        """Download listing images and run fast Gemini Vision evaluation with model rotation on 503."""
         if not listing.image_urls:
             logger.warning("No image URLs found for %s (%s)", listing.title, listing.url)
             return None
@@ -215,25 +197,35 @@ class GeminiVisionAnalyzer:
             )
 
         max_attempts = 4
+        use_thinking_zero = True
+
         for attempt in range(1, max_attempts + 1):
+            current_model = self.model_pool[(attempt - 1) % len(self.model_pool)]
             try:
                 logger.info(
-                    "[Gemini] Analyzing %d photo(s) for %s Lot #%s using %s...",
+                    "[Gemini] Analyzing %d photo(s) for %s Lot #%s using %s (attempt %d/%d)...",
                     len(images),
                     listing.source,
                     listing.lot_id,
-                    self.model_name,
+                    current_model,
+                    attempt,
+                    max_attempts,
                 )
+
+                config_kwargs = dict(
+                    system_instruction=SYSTEM_INSTRUCTION,
+                    temperature=0.1,
+                    response_mime_type="application/json",
+                    response_schema=VisionAnalysisResult,
+                    http_options=types.HttpOptions(timeout=45_000),
+                )
+                if use_thinking_zero:
+                    config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
+
                 response = self.client.models.generate_content(
-                    model=self.model_name,
+                    model=current_model,
                     contents=contents,
-                    config=types.GenerateContentConfig(
-                        system_instruction=SYSTEM_INSTRUCTION,
-                        temperature=0.1,
-                        response_mime_type="application/json",
-                        response_schema=VisionAnalysisResult,
-                        http_options=types.HttpOptions(timeout=90_000),
-                    ),
+                    config=types.GenerateContentConfig(**config_kwargs),
                 )
 
                 if response.parsed and isinstance(response.parsed, VisionAnalysisResult):
@@ -241,8 +233,6 @@ class GeminiVisionAnalyzer:
                 else:
                     result = VisionAnalysisResult.model_validate_json(response.text)
 
-                # Hard safety guard: enforce rejection if airbags deployed, beam/structural damage, or unapproved damage,
-                # and require EITHER approved color OR aftermarket modifications (is_modified).
                 if (
                     result.airbags_deployed
                     or result.structural_or_beam_damage
@@ -257,16 +247,25 @@ class GeminiVisionAnalyzer:
 
             except Exception as exc:
                 err_str = str(exc)
-                if ("404" in err_str or "NOT_FOUND" in err_str) and attempt < max_attempts:
-                    fallback = self._select_fallback_model(err_str)
-                    if fallback:
-                        logger.warning(
-                            "[Gemini] Model '%s' returned 404. Switching automatically to '%s'...",
-                            self.model_name,
-                            fallback,
-                        )
-                        self.model_name = fallback
-                        continue
+
+                # If a model does not support thinking_budget=0, retry immediately without thinking_config
+                if "thinking" in err_str.lower() and use_thinking_zero:
+                    use_thinking_zero = False
+                    continue
+
+                # If 404 NOT_FOUND, remove dead model from pool and retry immediately with next model
+                if "404" in err_str or "NOT_FOUND" in err_str:
+                    match = re.search(r"use models/([a-zA-Z0-9._-]+)", err_str)
+                    if match and match.group(1) not in self.model_pool:
+                        self.model_pool.insert(0, match.group(1))
+                    if current_model in self.model_pool and len(self.model_pool) > 1:
+                        self.model_pool.remove(current_model)
+                    logger.warning(
+                        "[Gemini] Model '%s' returned 404. Switching to '%s'...",
+                        current_model,
+                        self.model_pool[0],
+                    )
+                    continue
 
                 if (
                     any(
@@ -285,11 +284,13 @@ class GeminiVisionAnalyzer:
                     )
                     and attempt < max_attempts
                 ):
-                    wait_sec = 10 * attempt
+                    wait_sec = 6 * attempt
+                    next_model = self.model_pool[attempt % len(self.model_pool)]
                     logger.warning(
-                        "[Gemini] Temporary API overload/limit (%s). Waiting %ds before retry %d/%d...",
-                        "503 UNAVAILABLE" if "503" in err_str else "Rate Limit/Timeout",
+                        "[Gemini] %s overloaded/timed out. Waiting %ds and switching to '%s' (retry %d/%d)...",
+                        current_model,
                         wait_sec,
+                        next_model,
                         attempt + 1,
                         max_attempts,
                     )
