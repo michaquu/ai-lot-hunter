@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Target Search URLs (Updated with 2019-2027, 6-cyl, Front/Rear/Side damage filters)
+# Target Search URLs (Updated with 2019-2027, 6-cyl, Front/Rear/Side damage filters + newest lot sort)
 COPART_SEARCH_URL = (
     "https://www.copart.com/lotSearchResults?free=true&query=dodge%20challenger"
     "&qId=623c1d07-ca78-4193-b4ba-028e053de722-1793537611275&index=null"
@@ -14,6 +14,7 @@ COPART_SEARCH_URL = (
     "%22MODL%22:%5B%22lot_model_desc:%5C%22CHALLENGER%5C%22%22%5D,"
     "%22CYLN%22:%5B%22cylinders:%5C%226%5C%22%22%5D,"
     "%22YEAR%22:%5B%22lot_year:%5B2019%20TO%202027%5D%22%5D%7D,"
+    "%22sort%22:%5B%22lot_number%20desc%22%5D,"
     "%22searchName%22:%22%22,%22watchListOnly%22:false,%22freeFormSearch%22:false,%22exclusions%22:%5B%5D%7D"
 )
 

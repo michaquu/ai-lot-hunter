@@ -305,9 +305,8 @@ class AuctionScraper:
                 filtered.append(item)
             all_listings = filtered
 
-        results = all_listings[: self.max_listings]
-        logger.info("[Copart] Found %d newest listing(s) to inspect.", len(results))
-        return results
+        logger.info("[Copart] Found %d total listing(s) on search page.", len(all_listings))
+        return all_listings
 
     async def extract_copart_images(
         self, context: BrowserContext, listing: VehicleListing
@@ -469,9 +468,8 @@ class AuctionScraper:
             reverse=True,
         )
 
-        results = all_listings[: self.max_listings]
-        logger.info("[IAAI] Found %d newest listing(s) to inspect.", len(results))
-        return results
+        logger.info("[IAAI] Found %d total listing(s) on search page.", len(all_listings))
+        return all_listings
 
     async def extract_iaai_images(
         self, context: BrowserContext, listing: VehicleListing
@@ -578,11 +576,18 @@ class AuctionScraper:
             try:
                 if "copart" in active_sources:
                     copart_listings = await self.scrape_copart_search(context)
-                    for listing in copart_listings:
-                        unique_key = f"copart:{listing.lot_id}"
-                        if unique_key in seen_ids:
-                            logger.info("[Copart] Skipping already-seen lot %s", listing.lot_id)
-                            continue
+                    new_copart = [
+                        item
+                        for item in copart_listings
+                        if f"copart:{item.lot_id}" not in seen_ids
+                    ]
+                    logger.info(
+                        "[Copart] %d new listing(s) out of %d total (skipped %d already in seen_lots.json).",
+                        len(new_copart),
+                        len(copart_listings),
+                        len(copart_listings) - len(new_copart),
+                    )
+                    for listing in new_copart[: self.max_listings]:
                         if search_only:
                             populated_listings.append(listing)
                             continue
@@ -593,11 +598,18 @@ class AuctionScraper:
 
                 if "iaai" in active_sources:
                     iaai_listings = await self.scrape_iaai_search(context)
-                    for listing in iaai_listings:
-                        unique_key = f"iaai:{listing.lot_id}"
-                        if unique_key in seen_ids:
-                            logger.info("[IAAI] Skipping already-seen vehicle %s", listing.lot_id)
-                            continue
+                    new_iaai = [
+                        item
+                        for item in iaai_listings
+                        if f"iaai:{item.lot_id}" not in seen_ids
+                    ]
+                    logger.info(
+                        "[IAAI] %d new listing(s) out of %d total (skipped %d already in seen_lots.json).",
+                        len(new_iaai),
+                        len(iaai_listings),
+                        len(iaai_listings) - len(new_iaai),
+                    )
+                    for listing in new_iaai[: self.max_listings]:
                         if search_only:
                             populated_listings.append(listing)
                             continue
