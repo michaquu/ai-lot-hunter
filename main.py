@@ -171,7 +171,10 @@ async def run_pipeline() -> None:
         f"✅ PASS: {len(passed_matches)} | ❌ REJECT: {rejected_count}"
     )
     for listing, res in passed_matches:
-        print(f"  -> [{listing.source}] {listing.url} | {res.identified_color} | {res.damage_assessment}")
+        mods_tag = f" | 🔥 MODS: {res.modifications_detected}" if res.is_modified else ""
+        print(
+            f"  -> [{listing.source}] {listing.url} | {res.identified_color}{mods_tag} | {res.damage_assessment}"
+        )
     print("#" * 72 + "\n")
 
 

@@ -22,11 +22,18 @@ def send_telegram_alert(listing: VehicleListing, analysis: VisionAnalysisResult)
         logger.debug("Telegram credentials not configured; skipping Telegram push alert.")
         return False
 
+    mods_line = (
+        f"🔥 *Przeróbki / Tuning:* TAK ({analysis.modifications_detected})\n"
+        if analysis.is_modified
+        else "*Przeróbki / Tuning:* Brak (seria)\n"
+    )
+
     message = (
         f"✅ *DODGE CHALLENGER MATCH ({listing.source})*\n\n"
         f"*Title:* {listing.title}\n"
         f"*Lot ID:* `{listing.lot_id}`\n"
         f"*Identified Color:* {analysis.identified_color}\n"
+        f"{mods_line}"
         f"*Damage Assessment:* {analysis.damage_assessment}\n\n"
         f"🔗 [View Listing]({listing.url})"
     )
@@ -54,13 +61,25 @@ def notify_result(listing: VehicleListing, analysis: VisionAnalysisResult) -> No
     Print terminal evaluation summary and trigger a PASS notification (terminal + Telegram).
     """
     divider = "=" * 72
+    mods_info = (
+        f"TAK — {analysis.modifications_detected or 'Wykryto modyfikacje'}"
+        if analysis.is_modified
+        else "Nie (seria)"
+    )
+
     if analysis.decision == "PASS":
+        badge = (
+            "🔥 [PASS - TUNING/MODIFIED EXCEPTION]"
+            if (analysis.is_modified and not analysis.color_approved)
+            else "🚨 [PASS]"
+        )
         print(f"\n{divider}")
-        print(f"🚨 [PASS] QUALIFYING DODGE CHALLENGER FOUND ON {listing.source.upper()}!")
+        print(f"{badge} QUALIFYING DODGE CHALLENGER FOUND ON {listing.source.upper()}!")
         print(divider)
         print(f"  Title             : {listing.title}")
         print(f"  Listing URL       : {listing.url}")
-        print(f"  Identified Color  : {analysis.identified_color}")
+        print(f"  Identified Color  : {analysis.identified_color} (Color OK: {analysis.color_approved})")
+        print(f"  Modified / Tuning : {mods_info}")
         print(f"  Damage Assessment : {analysis.damage_assessment}")
         print(f"{divider}\n")
         send_telegram_alert(listing, analysis)
@@ -69,6 +88,7 @@ def notify_result(listing: VehicleListing, analysis: VisionAnalysisResult) -> No
             f"❌ [REJECT] {listing.source} #{listing.lot_id} ({listing.title})\n"
             f"   URL               : {listing.url}\n"
             f"   Color             : {analysis.identified_color} (Approved: {analysis.color_approved})\n"
+            f"   Modified / Tuning : {mods_info}\n"
             f"   Airbags Deployed? : {analysis.airbags_deployed}\n"
             f"   Heavy/Beam Crush? : {analysis.structural_or_beam_damage}\n"
             f"   Damage Assessment : {analysis.damage_assessment}\n"
