@@ -11,3 +11,11 @@ __pycache__/
 # Scraper debug artifacts
 debug_screenshots/
 browser_profile/
+
+# Web PWA & Firebase
+web/node_modules/
+web/dist/
+web/.env
+web/.env.local
+.firebase/
+firebase-debug.log

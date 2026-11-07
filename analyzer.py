@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from google import genai
 from google.genai import types
 
-from config import GEMINI_API_KEY, GEMINI_MODEL
+from config import ACTIVE_CONFIG, GEMINI_API_KEY, GEMINI_MODEL
 from scraper import VehicleListing, download_images
 
 logger = logging.getLogger(__name__)
@@ -161,12 +161,21 @@ class GeminiVisionAnalyzer:
             )
             return None
 
+        allowed_colors = ACTIVE_CONFIG.get(
+            "allowed_colors",
+            ["Black / Pitch Black", "Gray / Granite / Destroyer Gray", "Purple / Plum Crazy / Hellraisin"],
+        )
+        allow_modified = ACTIVE_CONFIG.get("allow_modified_any_color", True)
+        colors_str = ", ".join(allowed_colors) if allowed_colors else "Any color"
+        vehicle_label = f"{ACTIVE_CONFIG.get('make', 'DODGE')} {ACTIVE_CONFIG.get('model', 'CHALLENGER')}".strip()
+
         contents: List = [
-            f"Inspect this {listing.source} Dodge Challenger listing ({listing.title}, URL: {listing.url}). "
+            f"Inspect this {listing.source} {vehicle_label} listing ({listing.title}, URL: {listing.url}). "
             f"Check these {len(images)} salvage auction photos for: "
-            f"(1) Exterior color (Black, Gray/Granite/Destroyer, or Purple), "
+            f"(1) Exterior color — allowed target colors: [{colors_str}], "
             f"(2) Any aftermarket tuning/modifications (custom exhaust/tips, diffuser, cold air intake, "
-            f"custom wheels, widebody, splitter, louvers, spoiler/wicker bill, stripes/wrap, Hellcat/Shaker parts — if modified, it passes color regardless of paint color!), "
+            f"custom wheels, widebody, splitter, louvers, spoiler/wicker bill, stripes/wrap, Hellcat/Shaker parts — "
+            f"{'if modified, it passes color regardless of paint color!' if allow_modified else 'report if modified'}), "
             f"(3) Deployed airbags (if airbags are blown -> REJECT), and "
             f"(4) Whether the damage is repairable bolt-on/body damage (PASS) vs a catastrophic structural/engine/frame-rail wreck (REJECT). "
             f"Remember: removed bumper covers or fenders exposing the normal crash bar or radiator are normal insurance teardowns and should PASS!"
@@ -214,11 +223,12 @@ class GeminiVisionAnalyzer:
                 if result.vin_from_photo and (not listing.vin or "*" in listing.vin):
                     listing.vin = result.vin_from_photo.strip()
 
+                color_or_mod_ok = result.color_approved or (allow_modified and result.is_modified)
                 if (
                     result.airbags_deployed
                     or result.structural_or_beam_damage
                     or not result.damage_approved
-                    or not (result.color_approved or result.is_modified)
+                    or not color_or_mod_ok
                 ):
                     result.decision = "REJECT"
                 else:

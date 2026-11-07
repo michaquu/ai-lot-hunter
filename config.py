@@ -1,33 +1,122 @@
+import json
+import logging
 import os
+from pathlib import Path
+from urllib.parse import quote
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
-# Target Search URLs (Updated with 2019-2027, 6-cyl, Front/Rear/Side damage filters + newest lot sort)
-COPART_SEARCH_URL = (
-    "https://www.copart.com/lotSearchResults?free=true&query=dodge%20challenger"
-    "&qId=623c1d07-ca78-4193-b4ba-028e053de722-1793537611275&index=null"
-    "&searchCriteria=%7B%22query%22:%5B%22*%22%5D,%22filter%22:%7B%22FETI%22:%5B%22lot_condition_code:CERT-D%22%5D,"
-    "%22PRID%22:%5B%22damage_type_code:DAMAGECODE_FR%22,%22damage_type_code:DAMAGECODE_RR%22,%22damage_type_code:DAMAGECODE_SD%22%5D,"
-    "%22ODM%22:%5B%22odometer_reading_received:%5B0%20TO%2076300%5D%22%5D,"
-    "%22MAKE%22:%5B%22search_lot_make_desc:%5C%22DODGE%5C%22%22%5D,"
-    "%22MODL%22:%5B%22lot_model_desc:%5C%22CHALLENGER%5C%22%22%5D,"
-    "%22CYLN%22:%5B%22cylinders:%5C%226%5C%22%22%5D,"
-    "%22YEAR%22:%5B%22lot_year:%5B2019%20TO%202027%5D%22%5D%7D,"
-    "%22sort%22:%5B%22lot_number%20desc%22%5D,"
-    "%22searchName%22:%22%22,%22watchListOnly%22:false,%22freeFormSearch%22:false,%22exclusions%22:%5B%5D%7D"
-)
+SEARCH_CONFIG_FILE = "search_config.json"
+FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "").strip()
 
-IAAI_SEARCH_URL = (
-    "https://www.iaai.com/Search?url=Tg%2fLxBEbpfSDJmuUBF%2bXu3xGxjiM2wLOeSmr8pTVcxc%3d"
-)
+
+def build_copart_url_from_filters(cfg: dict) -> str:
+    """Dynamically construct a Copart searchCriteria URL from structured filter settings."""
+    make = str(cfg.get("make", "DODGE")).upper().strip()
+    model = str(cfg.get("model", "CHALLENGER")).upper().strip()
+    year_from = int(cfg.get("year_from", 2019))
+    year_to = int(cfg.get("year_to", 2027))
+    max_odo = int(cfg.get("max_odometer", 76300))
+    cylinders = str(cfg.get("cylinders", "6")).strip()
+    run_and_drive = bool(cfg.get("run_and_drive_only", True))
+
+    filters = {
+        "PRID": [
+            "damage_type_code:DAMAGECODE_FR",
+            "damage_type_code:DAMAGECODE_RR",
+            "damage_type_code:DAMAGECODE_SD",
+            "damage_type_code:DAMAGECODE_MN",
+        ],
+        "ODM": [f"odometer_reading_received:[0 TO {max_odo}]"],
+        "MAKE": [f'search_lot_make_desc:"{make}"'],
+        "MODL": [f'lot_model_desc:"{model}"'],
+        "YEAR": [f"lot_year:[{year_from} TO {year_to}]"],
+    }
+    if run_and_drive:
+        filters["FETI"] = ["lot_condition_code:CERT-D"]
+    if cylinders and cylinders.lower() not in ("any", "all", "dowolny", ""):
+        filters["CYLN"] = [f'cylinders:"{cylinders}"']
+
+    criteria = {
+        "query": ["*"],
+        "filter": filters,
+        "sort": ["lot_number desc"],
+        "searchName": "",
+        "watchListOnly": False,
+        "freeFormSearch": False,
+        "exclusions": [],
+    }
+    encoded_criteria = quote(json.dumps(criteria, separators=(",", ":")))
+    query_str = quote(f"{make.lower()} {model.lower()}")
+    return (
+        f"https://www.copart.com/lotSearchResults?free=true&query={query_str}"
+        f"&index=null&searchCriteria={encoded_criteria}"
+    )
+
+
+def build_iaai_url_from_filters(cfg: dict) -> str:
+    """Construct an IAAI keyword search URL if custom encrypted URL is not used."""
+    make = str(cfg.get("make", "DODGE")).strip()
+    model = str(cfg.get("model", "CHALLENGER")).strip()
+    query_str = quote(f"{make} {model}")
+    return f"https://www.iaai.com/Search?keyword={query_str}"
+
+
+def load_active_search_config() -> dict:
+    """
+    Load scraper filter configuration from search_config.json,
+    and override with live Firebase Firestore settings/scraper document if FIREBASE_PROJECT_ID is set.
+    """
+    cfg = {}
+    path = Path(SEARCH_CONFIG_FILE)
+    if path.exists():
+        try:
+            cfg = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    if FIREBASE_PROJECT_ID:
+        try:
+            url = (
+                f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}"
+                f"/databases/(default)/documents/settings/scraper"
+            )
+            resp = requests.get(url, timeout=8)
+            if resp.ok:
+                doc = resp.json().get("fields", {})
+                if "config_json" in doc and "stringValue" in doc["config_json"]:
+                    remote_cfg = json.loads(doc["config_json"]["stringValue"])
+                    if isinstance(remote_cfg, dict):
+                        cfg.update(remote_cfg)
+                        logger.info("[Config] Loaded live search filters from Firebase Firestore.")
+        except Exception as exc:
+            logger.debug("[Config] Could not fetch Firestore settings: %s", exc)
+
+    return cfg
+
+
+ACTIVE_CONFIG = load_active_search_config()
+
+# Target Search URLs (uses custom URLs if enabled, otherwise generates dynamically from filters)
+if ACTIVE_CONFIG.get("use_custom_urls", True) and ACTIVE_CONFIG.get("copart_url"):
+    COPART_SEARCH_URL = ACTIVE_CONFIG["copart_url"]
+else:
+    COPART_SEARCH_URL = build_copart_url_from_filters(ACTIVE_CONFIG)
+
+if ACTIVE_CONFIG.get("use_custom_urls", True) and ACTIVE_CONFIG.get("iaai_url"):
+    IAAI_SEARCH_URL = ACTIVE_CONFIG["iaai_url"]
+else:
+    IAAI_SEARCH_URL = build_iaai_url_from_filters(ACTIVE_CONFIG)
 
 # API Keys & Credentials
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 
-# Gemini Model Configuration (automatically falls back to newest available Flash model if 404)
+# Gemini Model Configuration (gemini-3.5-flash-lite responds in ~3-4s per car)
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
 # Scraper Settings

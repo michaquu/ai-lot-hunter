@@ -146,3 +146,48 @@ Wejdź w swoje repozytorium na GitHubie:
 - **Ręczne uruchomienie (`Run workflow`)**: W zakładce **Actions** możesz w każdej chwili kliknąć **Run workflow** i wybrać:
   - `mark_existing_seen` — jednorazowe zapisanie wszystkich obecnych aut do `seen_lots.json` bez wywoływania Gemini,
   - `analyze` — normalne sprawdzenie najnowszych ogłoszeń przez Gemini AI.
+
+---
+
+## 📱 Aplikacja PWA "Salvage Swipe" (React + Darmowy Firebase)
+
+W folderze `web/` znajduje się aplikacja **PWA (Progressive Web App)** w stylu Tindera dla aut, które przeszły selekcję AI (`PASS`):
+- **Swipe (Tinder dla aut)**:
+  - **W prawo (`❤️ ULUBIONE` lub strzałka `→`)** — zapisuje auto w zakładce **Ulubione**.
+  - **W lewo (`📁 SCHOWEK` lub strzałka `←`)** — odkłada auto do zakładki **Schowek** (nic nie ginie, w każdej chwili możesz przenieść auto ze Schowka do Ulubionych).
+- **Kopiowanie VIN + 1-klik do Bid.Cars**: Każda karta posiada przycisk kopiowania numeru VIN oraz bezpośredni link **Sprawdź cenę na Bid.Cars**, aby jednym kliknięciem sprawdzić archiwum aukcji i cenę sprzedaży.
+- **Konfigurator Filtrów i URL (`Filtry`)**:
+  - **Kreator filtrów** (Marka, Model, Rocznik od-do, Maks. przebieg, Cylindry, Status Run & Drive, Uszkodzenia, Dozwolone kolory AI, Wyjątek dla aut po tuningu) — automatycznie generuje URL do Copart oraz IAAI.
+  - **Tryb własnych linków URL** — możesz też wkleić bezpośrednio swój link z filtrami z Copart i IAAI.
+- **Powiadomienia o nowych autach**: Aplikacja wysyła powiadomienia przeglądarkowe/PWA oraz baner w czasie rzeczywistym, gdy GitHub Actions doda nowe auto (`PASS`).
+
+### 1. Uruchomienie aplikacji lokalnie
+```bash
+cd web
+npm install
+npm run dev
+```
+*(Podczas pracy lokalnej lub przed podpięciem Firebase aplikacja automatycznie wczytuje auta z pliku `/passed_cars.json` i zapisuje Twoje wybory w pamięci przeglądarki `localStorage`).*
+
+### 2. Darmowy Hosting i Baza Danych na Firebase (100% Plan Spark = 0 zł, bez karty!)
+Całość została zaprojektowana tak, aby korzystać **wyłącznie z bezpłatnego planu Firebase Spark (0 zł)**:
+- **Brak płatnych Cloud Functions i brak płatnego Storage** (zdjęcia ładowane są bezpośrednio z serwerów Copart/IAAI, a scraper działa za darmo na GitHub Actions).
+- **Cloud Firestore (Darmowy limit: 50 000 odczytów / 20 000 zapisów dziennie)** trzyma listę znalezionych aut, statusy (`Ulubione` / `Schowek`) oraz Twoje ustawienia filtrów.
+
+#### Krok po kroku — wdrożenie na Firebase:
+1. Wejdź na [Firebase Console](https://console.firebase.google.com/) i utwórz darmowy projekt (plan **Spark – Free**).
+2. W menu po lewej kliknij **Build → Firestore Database → Create database** i wybierz start w trybie produkcyjnym lub testowym (reguły są w pliku `firestore.rules`).
+3. W **Project Settings (koło zębate) → General → Your apps** kliknij ikonę Web (`</>`) i skopiuj parametry konfiguracji Firebase.
+4. Utwórz plik `web/.env` (na wzór `web/.env.example`) i wklej swoje dane projektu Firebase (`VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_API_KEY`, itd.).
+5. W repozytorium na GitHubie (**Settings → Secrets and variables → Actions**) dodaj sekret:
+   - `FIREBASE_PROJECT_ID` — ID Twojego projektu Firebase (dzięki temu GitHub Actions po każdym uruchomieniu automatycznie wyśle nowe auta `PASS` do Twojej bazy Firestore i pobierze z niej ustawione przez Ciebie filtry!).
+6. Zbuduj i wrzuć aplikację na darmowy **Firebase Hosting**:
+   ```bash
+   cd web
+   npm run build
+   cd ..
+   npx firebase-tools login
+   npx firebase-tools use TWOJE_FIREBASE_PROJECT_ID
+   npx firebase-tools deploy --only hosting,firestore:rules
+   ```
+Po wdrożeniu otrzymasz link `https://twoj-projekt.web.app`, który możesz otworzyć na telefonie i kliknąć **"Dodaj do ekranu głównego" (Zainstaluj aplikację PWA)**.

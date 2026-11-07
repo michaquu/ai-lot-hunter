@@ -1,0 +1,18 @@
+{
+  "use_custom_urls": true,
+  "make": "DODGE",
+  "model": "CHALLENGER",
+  "year_from": 2019,
+  "year_to": 2027,
+  "max_odometer": 76300,
+  "cylinders": "6",
+  "run_and_drive_only": true,
+  "allowed_colors": [
+    "Pitch Black (Black)",
+    "Granite / Destroyer / Smoke Show (Dark Gray)",
+    "Plum Crazy / Hellraisin (Purple)"
+  ],
+  "allow_modified_any_color": true,
+  "copart_url": "https://www.copart.com/lotSearchResults?free=true&query=dodge%20challenger&qId=623c1d07-ca78-4193-b4ba-028e053de722-1793537611275&index=null&searchCriteria=%7B%22query%22:%5B%22*%22%5D,%22filter%22:%7B%22FETI%22:%5B%22lot_condition_code:CERT-D%22%5D,%22PRID%22:%5B%22damage_type_code:DAMAGECODE_FR%22,%22damage_type_code:DAMAGECODE_RR%22,%22damage_type_code:DAMAGECODE_SD%22%5D,%22ODM%22:%5B%22odometer_reading_received:%5B0%20TO%2076300%5D%22%5D,%22MAKE%22:%5B%22search_lot_make_desc:%5C%22DODGE%5C%22%22%5D,%22MODL%22:%5B%22lot_model_desc:%5C%22CHALLENGER%5C%22%22%5D,%22CYLN%22:%5B%22cylinders:%5C%226%5C%22%22%5D,%22YEAR%22:%5B%22lot_year:%5B2019%20TO%202027%5D%22%5D%7D,%22sort%22:%5B%22lot_number%20desc%22%5D,%22searchName%22:%22%22,%22watchListOnly%22:false,%22freeFormSearch%22:false,%22exclusions%22:%5B%5D%7D",
+  "iaai_url": "https://www.iaai.com/Search?url=Tg%2fLxBEbpfSDJmuUBF%2bXu3xGxjiM2wLOeSmr8pTVcxc%3d"
+}

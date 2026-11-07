@@ -8,6 +8,7 @@ from typing import Dict, List, Set
 
 from analyzer import GeminiVisionAnalyzer, VisionAnalysisResult
 from config import (
+    FIREBASE_PROJECT_ID,
     HEADLESS,
     MAX_AGE_HOURS,
     MAX_IMAGES_PER_LISTING,
@@ -16,6 +17,7 @@ from config import (
     PASSED_CARS_MD_FILE,
     SEEN_LOTS_FILE,
 )
+import requests
 from notifier import notify_result, send_telegram_alert
 from scraper import AuctionScraper, VehicleListing
 
@@ -68,18 +70,41 @@ def save_passed_car(
     bidcars_url = f"https://bid.cars/pl/search/results?search-type=filters&q={lookup_query}"
 
     entry = {
+        "id": f"{listing.source.lower()}_{listing.lot_id}",
         "found_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "source": listing.source,
         "lot_id": listing.lot_id,
         "vin": vin_val or "Ukryty (szukaj po Lot ID)",
         "title": listing.title,
         "color": result.identified_color,
+        "color_approved": result.color_approved,
         "is_modified": result.is_modified,
         "modifications": result.modifications_detected or "Brak (seria)",
         "damage_assessment": result.damage_assessment,
         "url": listing.url,
         "price_check_url": bidcars_url,
+        "image_urls": listing.image_urls,
     }
+
+    # Optional: Push to free Firebase Spark Firestore (REST API, 0 Cloud Functions needed)
+    if FIREBASE_PROJECT_ID:
+        try:
+            doc_id = entry["id"]
+            fs_url = (
+                f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}"
+                f"/databases/(default)/documents/cars/{doc_id}"
+            )
+            fs_payload = {
+                "fields": {
+                    "car_json": {"stringValue": json.dumps(entry, ensure_ascii=False)},
+                    "found_at": {"stringValue": entry["found_at"]},
+                    "source": {"stringValue": entry["source"]},
+                    "lot_id": {"stringValue": str(entry["lot_id"])},
+                }
+            }
+            requests.patch(fs_url, json=fs_payload, timeout=8)
+        except Exception as exc:
+            logger.debug("Firestore sync skipped: %s", exc)
 
     # Deduplicate by (source, lot_id)
     updated = [
@@ -91,7 +116,11 @@ def save_passed_car(
         )
     ]
     updated.insert(0, entry)
-    json_path.write_text(json.dumps(updated, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    serialized_json = json.dumps(updated, indent=2, ensure_ascii=False) + "\n"
+    json_path.write_text(serialized_json, encoding="utf-8")
+    web_public_json = Path("web/public/passed_cars.json")
+    if web_public_json.parent.exists():
+        web_public_json.write_text(serialized_json, encoding="utf-8")
 
     # Regenerate PASSED_CARS.md table for easy viewing on GitHub
     render_passed_cars_markdown(updated, md_filepath)

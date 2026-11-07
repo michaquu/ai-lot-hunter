@@ -1,0 +1,18 @@
+{
+  "name": "AutoSwipe AI — Copart & IAAI Finder",
+  "short_name": "AutoSwipe AI",
+  "description": "Tinder dla wyselekcjonowanych przez AI aut z aukcji Copart i IAAI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

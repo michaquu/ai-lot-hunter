@@ -1,0 +1,41 @@
+[
+  {
+    "id": "iaai_46932215",
+    "found_at": "2026-11-01 18:37 UTC",
+    "source": "IAAI",
+    "lot_id": "46932215",
+    "vin": "Sprawdź po Lot ID (46932215)",
+    "title": "2023 DODGE CHALLENGER SXT",
+    "color": "Granite Gray",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "Side impact damage affecting the right front fender and passenger door, airbags intact and no major structural damage.",
+    "url": "https://www.iaai.com/VehicleDetail/46932215~US",
+    "price_check_url": "https://bid.cars/pl/search/results?search-type=filters&q=46932215",
+    "image_urls": [
+      "https://vis.iaai.com/resizer?imageKeys=46932215~SID~I1&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=46932215~SID~I2&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=46932215~SID~I3&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=46932215~SID~I4&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=46932215~SID~I5&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=46932215~SID~I6&width=800&height=600"
+    ]
+  },
+  {
+    "id": "copart_71903086",
+    "found_at": "2026-11-01 14:06 UTC",
+    "source": "Copart",
+    "lot_id": "71903086",
+    "vin": "Sprawdź po Lot ID (71903086)",
+    "title": "2019 DODGE CHALLENGER SXT",
+    "color": "Pitch Black",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "Damage limited to bolt-on components (front bumper cover, passenger headlight, passenger front fender). Cooling pack and radiator support straight, airbags intact.",
+    "url": "https://www.copart.com/lot/71903086",
+    "price_check_url": "https://bid.cars/pl/search/results?search-type=filters&q=71903086",
+    "image_urls": []
+  }
+]
