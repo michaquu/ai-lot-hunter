@@ -262,7 +262,7 @@ export default function App() {
           </div>
           <div>
             <h1 className="font-bold text-base leading-none tracking-tight flex items-center gap-1.5">
-              AutoSwipe <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 font-semibold">AI</span>
+              Lot Hunter <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 font-semibold">AI</span>
             </h1>
             <p className="text-[11px] text-zinc-400 mt-0.5">
               Copart & IAAI • Do oceny: <strong className="text-zinc-200">{unswipedCars.length}</strong>

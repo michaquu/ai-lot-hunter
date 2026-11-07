@@ -149,7 +149,7 @@ Wejdź w swoje repozytorium na GitHubie:
 
 ---
 
-## 📱 Aplikacja PWA "Salvage Swipe" (React + Darmowy Firebase)
+## 📱 Aplikacja PWA "AI Lot Hunter" (`ai-lot-hunter`) — React + Darmowy Firebase
 
 W folderze `web/` znajduje się aplikacja **PWA (Progressive Web App)** w stylu Tindera dla aut, które przeszły selekcję AI (`PASS`):
 - **Swipe (Tinder dla aut)**:

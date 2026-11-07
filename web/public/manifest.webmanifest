@@ -1,7 +1,7 @@
 {
-  "name": "AutoSwipe AI — Copart & IAAI Finder",
-  "short_name": "AutoSwipe AI",
-  "description": "Tinder dla wyselekcjonowanych przez AI aut z aukcji Copart i IAAI",
+  "name": "AI Lot Hunter — Copart & IAAI Scout",
+  "short_name": "AI Lot Hunter",
+  "description": "Wyselekcjonowane przez AI auta z aukcji Copart i IAAI",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#09090b",
