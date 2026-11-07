@@ -25,12 +25,7 @@ def _discover_chat_id_from_updates(bot_token: str) -> Optional[str]:
             for key in ("message", "edited_message", "my_chat_member", "channel_post"):
                 msg = update.get(key)
                 if isinstance(msg, dict) and "chat" in msg and "id" in msg["chat"]:
-                    discovered = str(msg["chat"]["id"])
-                    logger.info(
-                        "[Telegram] Automatycznie wykryto prawidłowe TELEGRAM_CHAT_ID z getUpdates: %s",
-                        discovered,
-                    )
-                    return discovered
+                    return str(msg["chat"]["id"])
     except Exception as exc:
         logger.debug("[Telegram] Nie udało się pobrać getUpdates: %s", exc)
     return None
@@ -39,8 +34,6 @@ def _discover_chat_id_from_updates(bot_token: str) -> Optional[str]:
 def send_telegram_alert(listing: VehicleListing, analysis: VisionAnalysisResult) -> bool:
     """
     Send a Telegram message when a vehicle passes inspection.
-    If TELEGRAM_CHAT_ID is invalid or returns 'chat not found', automatically
-    queries /getUpdates to find the user's active chat with the bot.
     """
     if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "your_telegram_bot_token_here":
         logger.info(
@@ -53,15 +46,20 @@ def send_telegram_alert(listing: VehicleListing, analysis: VisionAnalysisResult)
         if analysis.is_modified
         else "Przeróbki / Tuning: Brak (seria)\n"
     )
+    vin_display = listing.vin or analysis.vin_from_photo or "Ukryty (sprawdź po Lot ID)"
+    lookup_query = listing.vin if (listing.vin and "*" not in listing.vin) else listing.lot_id
+    bidcars_url = f"https://bid.cars/pl/search/results?search-type=filters&q={lookup_query}"
 
     message = (
         f"✅ DODGE CHALLENGER MATCH ({listing.source})\n\n"
         f"Title: {listing.title}\n"
         f"Lot ID: {listing.lot_id}\n"
+        f"VIN: {vin_display}\n"
         f"Identified Color: {analysis.identified_color}\n"
         f"{mods_line}"
         f"Damage Assessment: {analysis.damage_assessment}\n\n"
-        f"🔗 Link: {listing.url}"
+        f"🔗 Link do aukcji: {listing.url}\n"
+        f"💰 Sprawdź cenę sprzedaży: {bidcars_url}"
     )
 
     api_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -72,10 +70,7 @@ def send_telegram_alert(listing: VehicleListing, analysis: VisionAnalysisResult)
     )
 
     if not chat_id:
-        logger.error(
-            "[Telegram] Brak TELEGRAM_CHAT_ID oraz brak wiadomości w getUpdates! "
-            "Wejdź na Telegramie w rozmowę ze swoim botem, kliknij START (wyślij mu np. 'hej') i uruchom ponownie."
-        )
+        logger.error("[Telegram] Brak skonfigurowanego TELEGRAM_CHAT_ID w Secrets.")
         return False
 
     payload = {
@@ -87,11 +82,6 @@ def send_telegram_alert(listing: VehicleListing, analysis: VisionAnalysisResult)
     try:
         response = requests.post(api_url, json=payload, timeout=10)
         if not response.ok and "chat not found" in response.text.lower():
-            logger.warning(
-                "[Telegram] Podane TELEGRAM_CHAT_ID (%s) zwróciło 'chat not found'. "
-                "Próbuję automatycznie wykryć Twoje ID czatu z getUpdates...",
-                chat_id,
-            )
             discovered_id = _discover_chat_id_from_updates(TELEGRAM_BOT_TOKEN)
             if discovered_id and discovered_id != str(chat_id):
                 payload["chat_id"] = discovered_id
@@ -99,9 +89,7 @@ def send_telegram_alert(listing: VehicleListing, analysis: VisionAnalysisResult)
 
         if not response.ok:
             logger.error(
-                "[Telegram] Błąd wysyłania powiadomienia (%s): %s -> "
-                "WAŻNE: Otwórz swojego bota w aplikacji Telegram, kliknij przycisk START (wyślij mu dowolną wiadomość np. 'start') "
-                "i sprawdź czy TELEGRAM_CHAT_ID to Twój numer ID użytkownika (np. z @userinfobot).",
+                "[Telegram] Błąd wysyłania powiadomienia (%s): %s",
                 response.status_code,
                 response.text,
             )
@@ -130,6 +118,7 @@ def notify_result(listing: VehicleListing, analysis: VisionAnalysisResult) -> No
         if analysis.is_modified
         else "Nie (seria)"
     )
+    vin_display = listing.vin or analysis.vin_from_photo or "Ukryty (sprawdź po Lot ID)"
 
     if analysis.decision == "PASS":
         pass_type = (
@@ -138,10 +127,11 @@ def notify_result(listing: VehicleListing, analysis: VisionAnalysisResult) -> No
             else "✅ WYBRANO DO WYSŁANIA (PASS)"
         )
         logger.info(
-            "%s | %s #%s | URL: %s | Kolor: %s | Tuning: %s | Stan: %s",
+            "%s | %s #%s | VIN: %s | URL: %s | Kolor: %s | Tuning: %s | Stan: %s",
             pass_type,
             listing.source,
             listing.lot_id,
+            vin_display,
             listing.url,
             analysis.identified_color,
             mods_info,
@@ -152,6 +142,7 @@ def notify_result(listing: VehicleListing, analysis: VisionAnalysisResult) -> No
             f"🚨 {pass_type}: {listing.source.upper()} #{listing.lot_id}\n"
             f"{divider}\n"
             f"  Title             : {listing.title}\n"
+            f"  VIN               : {vin_display}\n"
             f"  Listing URL       : {listing.url}\n"
             f"  Identified Color  : {analysis.identified_color} (Color OK: {analysis.color_approved})\n"
             f"  Modified / Tuning : {mods_info}\n"
@@ -162,9 +153,10 @@ def notify_result(listing: VehicleListing, analysis: VisionAnalysisResult) -> No
         send_telegram_alert(listing, analysis)
     else:
         logger.info(
-            "❌ ODRZUCONO (REJECT) | %s #%s (%s) | Kolor: %s (OK=%s) | Tuning: %s | Poduszki: %s | Belka/Dzwon: %s | Powód: %s",
+            "❌ ODRZUCONO (REJECT) | %s #%s (VIN: %s, %s) | Kolor: %s (OK=%s) | Tuning: %s | Poduszki: %s | Belka/Dzwon: %s | Powód: %s",
             listing.source,
             listing.lot_id,
+            vin_display,
             listing.url,
             analysis.identified_color,
             analysis.color_approved,

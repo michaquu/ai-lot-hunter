@@ -72,6 +72,13 @@ class VisionAnalysisResult(BaseModel):
             "'Severe frame/engine crush', 'Rejected color (White) and stock/unmodified')."
         ),
     )
+    vin_from_photo: Optional[str] = Field(
+        default=None,
+        description=(
+            "If a 17-character VIN (starting with 2C3C...) is visible on a sticker, screen, or plate in any photo, "
+            "extract it here. Otherwise None."
+        ),
+    )
 
 
 SYSTEM_INSTRUCTION = """You are a practical salvage auto auction buyer specializing in 2019+ Dodge Challengers on Copart and IAAI.
@@ -203,6 +210,9 @@ class GeminiVisionAnalyzer:
                     result = response.parsed
                 else:
                     result = VisionAnalysisResult.model_validate_json(response.text)
+
+                if result.vin_from_photo and (not listing.vin or "*" in listing.vin):
+                    listing.vin = result.vin_from_photo.strip()
 
                 if (
                     result.airbags_deployed

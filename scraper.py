@@ -29,8 +29,28 @@ class VehicleListing:
     lot_id: str
     url: str
     title: str = "Dodge Challenger"
+    vin: str = ""
     created_at: Optional[datetime] = None
     image_urls: List[str] = field(default_factory=list)
+
+
+def extract_vin_from_text(text: str) -> str:
+    """Extract a 17-character Dodge Challenger VIN (2C3C..., full or partially masked with *) from text."""
+    if not text:
+        return ""
+    # Prefer unmasked 17-char Challenger VIN first
+    full_match = re.search(r"\b(2C3C[A-HJ-NPR-Z0-9]{13})\b", text)
+    if full_match:
+        return full_match.group(1)
+    # Fallback to masked Challenger VIN (e.g. 2C3CDZAG*LH******)
+    masked_match = re.search(r"(2C3C[A-HJ-NPR-Z0-9\*]{13})", text)
+    if masked_match:
+        return masked_match.group(1)
+    # Generic VIN label match
+    label_match = re.search(r"VIN\s*[:#-]?\s*([A-HJ-NPR-Z0-9\*]{11,17})", text, re.IGNORECASE)
+    if label_match:
+        return label_match.group(1).strip()
+    return ""
 
 
 def parse_copart_timestamp(item: dict) -> Optional[datetime]:
@@ -227,11 +247,15 @@ class AuctionScraper:
                                 lot_url = f"https://www.copart.com/lot/{lot_num}"
                                 thumb_url = normalize_copart_image_url(str(item.get("tims") or ""))
                                 initial_imgs = [thumb_url] if thumb_url.startswith("http") else []
+                                raw_vin = str(
+                                    item.get("fv") or item.get("vin") or item.get("vn") or ""
+                                ).strip()
                                 listings_by_lot[lot_num] = VehicleListing(
                                     source="Copart",
                                     lot_id=lot_num,
                                     url=lot_url,
                                     title=title,
+                                    vin=raw_vin,
                                     created_at=created_dt,
                                     image_urls=initial_imgs,
                                 )
@@ -342,6 +366,9 @@ class AuctionScraper:
                     try:
                         payload = await response.json()
                         text_dump = str(payload)
+                        found_vin = extract_vin_from_text(text_dump)
+                        if found_vin and (not listing.vin or "*" in listing.vin):
+                            listing.vin = found_vin
                         for match in re.findall(
                             r"https?://[^\s'\"<>]+?_ful\.(?:jpg|jpeg|png)",
                             text_dump,
@@ -379,6 +406,14 @@ class AuctionScraper:
                 page_title = await page.locator("h1.title, h1").first.inner_text(timeout=3000)
                 if page_title and page_title.strip():
                     listing.title = page_title.strip()
+            except Exception:
+                pass
+
+            try:
+                body_text = await page.locator("body").inner_text(timeout=3000)
+                dom_vin = extract_vin_from_text(body_text)
+                if dom_vin and (not listing.vin or "*" in listing.vin):
+                    listing.vin = dom_vin
             except Exception:
                 pass
 
@@ -455,10 +490,12 @@ class AuctionScraper:
                         const card = el.closest('.table-row, .card, tr, li, div.row') || el.parentElement;
                         const img = card ? card.querySelector('img[src*="vis.iaai.com"], img[data-src*="vis.iaai.com"]') : null;
                         const imgSrc = img ? (img.getAttribute('data-src') || img.src || '') : '';
+                        const cardText = card ? (card.innerText || '') : '';
                         return {
                             href: el.href,
                             text: (el.innerText || '').trim(),
-                            imgSrc: imgSrc
+                            imgSrc: imgSrc,
+                            cardText: cardText
                         };
                     })""",
                 )
@@ -470,15 +507,20 @@ class AuctionScraper:
                         lot_id = raw_id.split("~")[0]
                         full_url = urljoin("https://www.iaai.com", href)
                         img_src = item.get("imgSrc", "")
+                        card_vin = extract_vin_from_text(item.get("cardText", ""))
                         if lot_id not in listings_by_id:
                             listings_by_id[lot_id] = VehicleListing(
                                 source="IAAI",
                                 lot_id=lot_id,
                                 url=full_url,
                                 title=item.get("text") or f"IAAI Vehicle #{lot_id}",
+                                vin=card_vin,
                             )
-                        elif item.get("text") and listings_by_id[lot_id].title.startswith("IAAI Vehicle"):
-                            listings_by_id[lot_id].title = item["text"]
+                        else:
+                            if item.get("text") and listings_by_id[lot_id].title.startswith("IAAI Vehicle"):
+                                listings_by_id[lot_id].title = item["text"]
+                            if card_vin and not listings_by_id[lot_id].vin:
+                                listings_by_id[lot_id].vin = card_vin
 
                         if img_src and "vis.iaai.com" in img_src and not listings_by_id[lot_id].image_urls:
                             base_img = normalize_iaai_image_url(img_src)

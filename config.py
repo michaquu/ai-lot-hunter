@@ -36,6 +36,8 @@ MAX_LISTINGS_PER_SOURCE = int(os.getenv("MAX_LISTINGS_PER_SOURCE", "10"))
 MAX_IMAGES_PER_LISTING = int(os.getenv("MAX_IMAGES_PER_LISTING", "6"))
 MAX_AGE_HOURS = int(os.getenv("MAX_AGE_HOURS", "24"))
 SEEN_LOTS_FILE = "seen_lots.json"
+PASSED_CARS_FILE = "passed_cars.json"
+PASSED_CARS_MD_FILE = "PASSED_CARS.md"
 
 # Realistic Browser Fingerprint Settings
 DEFAULT_USER_AGENT = (
