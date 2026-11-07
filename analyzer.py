@@ -16,23 +16,22 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 class VisionAnalysisResult(BaseModel):
     decision: Literal["PASS", "REJECT"] = Field(
         description=(
-            "Return 'PASS' ONLY if damage_approved is True (airbags_deployed is False and "
-            "structural_or_beam_damage is False) AND (color_approved is True OR is_modified is True). "
-            "Otherwise return 'REJECT'."
+            "Return 'PASS' if airbags_deployed is False, structural_or_beam_damage is False, "
+            "AND (color_approved is True OR is_modified is True). Otherwise return 'REJECT'."
         )
     )
     identified_color: str = Field(
         description="The exterior paint color identified from the photos (e.g., 'Pitch Black', 'Granite Gray', 'Plum Crazy Purple', 'White', 'Red')."
     )
     color_approved: bool = Field(
-        description="True ONLY if the exterior color is Pitch Black (Black), Granite (Dark/Metallic Gray), or Plum Crazy / Hellraisin (Purple)."
+        description="True ONLY if the exterior color is Pitch Black (Black), Granite / Destroyer / Smoke Show (Gray / Dark Gray), or Plum Crazy / Hellraisin (Purple)."
     )
     is_modified: bool = Field(
         description=(
             "True if the car has visible aftermarket tuning or visual/performance modifications "
             "(e.g., custom/upgraded exhaust tips or muffler, rear diffuser, cold air intake under hood, "
             "widebody kit, custom wheels/rims, Hellcat/Shaker hood or bumper conversion, window louvers, "
-            "front splitter with rods, big spoiler, custom steering wheel/interior)."
+            "front splitter with rods, big spoiler/wicker bill, stripes/wraps, custom steering wheel/interior)."
         )
     )
     modifications_detected: Optional[str] = Field(
@@ -44,77 +43,74 @@ class VisionAnalysisResult(BaseModel):
     )
     airbags_deployed: bool = Field(
         description=(
-            "True if ANY airbag is deployed or blown (steering wheel horn pad torn/open, "
-            "passenger dash airbag deployed, side curtain airbags hanging from roof liner, "
-            "seat/knee airbags deployed, or yellow/white airbag fabric visible)."
+            "True ONLY if you can clearly see a deployed/blown airbag (torn steering wheel horn cover with airbag out, "
+            "passenger dash airbag deployed, side curtain airbags hanging down from the headliner, "
+            "or deployed seat/knee airbag fabric)."
         )
     )
     structural_or_beam_damage: bool = Field(
         description=(
-            "True if the car is heavily wrecked: e.g., front/rear bumper reinforcement beam (crash bar / 'belka') "
-            "is bent or crushed, frame rails ('podłużnice') are bent, radiator support is pushed into the engine, "
-            "the front end is torn off exposing the engine/belts/cooling pack, pillars/roof are deformed, "
-            "or suspension/wheels are ripped or crooked."
+            "True ONLY if the car is SEVERELY / CATASTROPHICALLY wrecked ('mega mocno rozwalony'): "
+            "e.g., the impact crushed deep into the engine block itself, the main frame rails ('podłużnice') or front crossmember "
+            "are visibly mangled/twisted, the roof or A/B/C pillars are buckled, or a wheel/suspension is completely ripped off / folded under. "
+            "Set to FALSE if the bumper cover or fender was simply removed/damaged exposing the normal crash bar or radiator!"
         )
     )
     damage_approved: bool = Field(
         description=(
-            "True ONLY if airbags_deployed is False, structural_or_beam_damage is False, "
-            "and damage is strictly minor/superficial bolt-on (bumper cover, grille, headlight/taillight, "
-            "minor hood or fender dent without internal structural crush)."
+            "True whenever airbags_deployed is False and structural_or_beam_damage is False "
+            "(repairable front, rear, or side body damage)."
         )
     )
     damage_assessment: str = Field(
-        description="Concise 1-2 sentence assessment describing the visible damage, crash beam/engine status, and airbag status."
+        description="Concise 1-2 sentence assessment describing the visible damage, airbag status, and why it is repairable or rejected."
     )
     rejection_reason: Optional[str] = Field(
         default=None,
         description=(
             "If decision is REJECT, state the exact reason (e.g., 'Deployed airbags', "
-            "'Bent front reinforcement beam / exposed engine', 'Rejected color (White) and stock/unmodified')."
+            "'Severe frame/engine crush', 'Rejected color (White) and stock/unmodified')."
         ),
     )
 
 
-SYSTEM_INSTRUCTION = """You are a strict, expert salvage auto auction inspector specializing in 2019+ Dodge Challengers.
-Your task is to filter out heavily damaged cars and cars with blown airbags, while finding clean/lightly damaged Challengers in target colors OR with interesting aftermarket modifications.
+SYSTEM_INSTRUCTION = """You are a practical salvage auto auction buyer specializing in 2019+ Dodge Challengers on Copart and IAAI.
+Keep in mind that EVERY vehicle on Copart and IAAI is a salvage/collision car — you are looking for repairable project cars!
+Do NOT be overly pedantic: insurance yards routinely unbolt/remove plastic bumper covers, headlights, or fenders for inspection, which exposes the metal bumper bar or radiator support underneath. That is NORMAL and MUST NOT be rejected as "exposed engine/structural damage"!
 
-Evaluate the provided vehicle photos against these STRICT rules:
+Evaluate the provided vehicle photos against these rules:
 
-1. COLOR & TUNING/MODIFICATION FILTER (color_approved OR is_modified):
+1. COLOR & TUNING/MODIFICATION FILTER (`color_approved` OR `is_modified`):
    - TARGET COLORS (`color_approved = true`):
      * Pitch Black (Black)
-     * Granite / Granite Crystal (Dark Gray / Metallic Charcoal Gray)
+     * Granite / Granite Crystal / Destroyer Gray / Smoke Show (Dark Gray, Metallic Gray, or Charcoal Gray)
      * Plum Crazy or Hellraisin (Purple)
    - MODIFIED / TUNED EXCEPTION (`is_modified = true`):
-     * Look closely at all photos (exterior, rear bumper/exhaust, wheels, and under-hood) for aftermarket modifications ("przeróbki / tuning"):
-       - Upgraded/aftermarket exhaust system, custom exhaust tips, or aggressive rear diffuser ("lepszy tłumik / wydech / dyfuzor")
-       - Cold air intake / cone filter visible in the engine bay ("stożkowy dolot powietrza")
-       - Widebody kit / fender flares, Hellcat/SRT bumper conversion, Shaker hood or dual-snorkel hood
-       - Custom aftermarket wheels/rims, lowered stance, upgraded brake calipers
-       - Window louvers (żaluzje na szybach), front splitter with support rods, large rear wing/spoiler, custom RGB/halos, or custom carbon/leather interior.
-     * If the car has noticeable aftermarket modifications (`is_modified = true`), it CAN PASS EVEN IF ITS COLOR IS NOT ON THE TARGET COLOR LIST (as long as it passes the damage and airbag rules below!).
+     * Look for any aftermarket tuning or visual modifications ("przeróbki / tuning"):
+       - Upgraded/aftermarket exhaust tips, muffler, or rear diffuser ("lepszy tłumik / wydech / dyfuzor")
+       - Cold air intake / cone filter visible under the hood ("stożkowy dolot powietrza")
+       - Widebody kit, Hellcat/SRT bumper conversion, Shaker hood or dual-snorkel hood
+       - Custom aftermarket wheels/rims, painted brake calipers, lowered stance
+       - Window louvers (żaluzje na szybach), front splitter, wicker bill / rear spoiler, racing stripes/wrap, custom halo lights, or custom interior.
+     * If `is_modified = true`, the car PASSES the color requirement regardless of its paint color!
 
-2. AIRBAG FILTER (airbags_deployed) — STRICT REJECT:
-   - Inspect all interior and exterior photos carefully for deployed airbags ("wystrzelone poduszki").
-   - Look at the steering wheel center cover, dashboard passenger side, A-pillar / roof headliner (side curtain airbags), knee bolster, and seat bolsters.
-   - If you see ANY deployed airbag fabric, torn steering wheel cover, or blown curtain/dash airbag -> set `airbags_deployed = true` and IMMEDIATELY REJECT (`decision = "REJECT"`), even if the car is modified!
+2. AIRBAG FILTER (`airbags_deployed`) — STRICT REJECT:
+   - Check interior photos for deployed airbags ("wystrzelone poduszki"): steering wheel, dashboard, side curtain hanging from roof liner, or knee/seat airbags.
+   - Only set `airbags_deployed = true` if an airbag is visibly deployed/blown. If airbags are intact, set `airbags_deployed = false`.
 
-3. HEAVY CRASH / BENT BEAM / EXPOSED ENGINE FILTER (structural_or_beam_damage) — STRICT REJECT:
-   - Immediately REJECT (`structural_or_beam_damage = true`) if the vehicle is heavily wrecked ("mocno rozwalony"), including ANY of the following:
-     * Exposed engine / engine bay internals visible from the outside because the front clip, hood, or radiator support is smashed or ripped off.
-     * Bent, kinked, twisted, or pushed-in bumper reinforcement beam / crash bar ("skrzywiona belka zderzaka") or bent frame rails ("podłużnice").
-     * Crushed radiator / condenser / cooling pack pushed back toward the engine block.
-     * Bent or buckled roof, or damaged A, B, or C pillars, or heavy rear quarter-panel crush into the cabin/trunk floor.
-     * Ripped, collapsed, or crooked suspension (wheel sitting at an unnatural angle or pushed into the fender well).
+3. SEVERE WRECK FILTER (`structural_or_beam_damage`):
+   - Set `structural_or_beam_damage = true` ONLY if the car is HEAVILY / CATASTROPHICALLY SMASHED ("mega mocno rozwalony"):
+     * Front impact is so deep that the radiator/cooling pack and front structure are crushed right into the engine block/pulleys, or the engine is displaced/broken.
+     * The main steel bumper reinforcement beam ("belka zderzaka") or frame rails ("podłużnice") are visibly bent in half, V-shaped, or torn off.
+     * The roof is buckled/caved in, or A/B/C pillars are severely deformed.
+     * A wheel is completely ripped off the car or folded at an extreme unnatural angle (broken control arms/knuckle).
+   - IMPORTANT — SET `structural_or_beam_damage = false` AND `damage_approved = true` FOR NORMAL REPAIRABLE SALVAGE DAMAGE:
+     * Missing, cracked, or removed plastic bumper cover (even if you can see the metal bumper beam, crash bar, radiator, or inner fender behind it!).
+     * Dented, scratched, or missing bolt-on fender, hood, grille, headlight, taillight, trunk lid, door, or moderate quarter-panel dent where the car still holds its normal shape and stance.
 
-4. ACCEPTABLE DAMAGE (damage_approved):
-   - Set `damage_approved = true` ONLY when `airbags_deployed == false`, `structural_or_beam_damage == false`, and the damage is genuinely light, superficial, cosmetic, or simple bolt-on outer parts (bumper cover, grille, headlight/taillight, lightly dented fender/hood/trunk lid with straight underlying structure).
-
-5. FINAL DECISION:
-   - Return `decision = "PASS"` ONLY if:
-     `damage_approved == true` AND `airbags_deployed == false` AND `structural_or_beam_damage == false`
-     AND (`color_approved == true` OR `is_modified == true`).
+4. FINAL DECISION:
+   - Return `decision = "PASS"` whenever:
+     `airbags_deployed == false` AND `structural_or_beam_damage == false` AND (`color_approved == true` OR `is_modified == true`).
    - Otherwise, return `decision = "REJECT"`.
 """
 
@@ -160,13 +156,13 @@ class GeminiVisionAnalyzer:
 
         contents: List = [
             f"Inspect this {listing.source} Dodge Challenger listing ({listing.title}, URL: {listing.url}). "
-            f"Carefully check all {len(images)} photos for: "
-            f"(1) Exterior color (Pitch Black, Granite Gray, or Plum Crazy/Hellraisin Purple), "
-            f"(2) Any aftermarket tuning/modifications (custom exhaust/muffler tips, diffuser, cold air intake, "
-            f"custom wheels, widebody, splitter, louvers, Hellcat/Shaker conversion — if modified, it passes the color check regardless of paint color!), "
-            f"(3) Deployed airbags (steering wheel, dash, curtain, seats -> immediate reject), and "
-            f"(4) Heavy front/rear/side crash damage such as exposed engine, bent bumper reinforcement beam (belka), "
-            f"pushed-in radiator support, bent frame rails, pillar/roof damage, or suspension damage (-> immediate reject)."
+            f"Check these {len(images)} salvage auction photos for: "
+            f"(1) Exterior color (Black, Gray/Granite/Destroyer, or Purple), "
+            f"(2) Any aftermarket tuning/modifications (custom exhaust/tips, diffuser, cold air intake, "
+            f"custom wheels, widebody, splitter, louvers, spoiler/wicker bill, stripes/wrap, Hellcat/Shaker parts — if modified, it passes color regardless of paint color!), "
+            f"(3) Deployed airbags (if airbags are blown -> REJECT), and "
+            f"(4) Whether the damage is repairable bolt-on/body damage (PASS) vs a catastrophic structural/engine/frame-rail wreck (REJECT). "
+            f"Remember: removed bumper covers or fenders exposing the normal crash bar or radiator are normal insurance teardowns and should PASS!"
         ]
         for img_bytes, mime_type in images:
             contents.append(
@@ -218,7 +214,6 @@ class GeminiVisionAnalyzer:
                 else:
                     result.decision = "PASS"
 
-                # Keep the fast working model at index 0 for subsequent cars
                 if current_model != self.model_pool[0]:
                     self.model_pool.remove(current_model)
                     self.model_pool.insert(0, current_model)

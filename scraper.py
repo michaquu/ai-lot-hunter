@@ -225,12 +225,15 @@ class AuctionScraper:
                                 )
                                 created_dt = parse_copart_timestamp(item)
                                 lot_url = f"https://www.copart.com/lot/{lot_num}"
+                                thumb_url = normalize_copart_image_url(str(item.get("tims") or ""))
+                                initial_imgs = [thumb_url] if thumb_url.startswith("http") else []
                                 listings_by_lot[lot_num] = VehicleListing(
                                     source="Copart",
                                     lot_id=lot_num,
                                     url=lot_url,
                                     title=title,
                                     created_at=created_dt,
+                                    image_urls=initial_imgs,
                                 )
                     except Exception:
                         pass
@@ -314,6 +317,7 @@ class AuctionScraper:
         """Navigate to a Copart lot detail page and extract primary vehicle image URLs."""
         page = await context.new_page()
         await apply_stealth(page)
+        fallback_urls = list(listing.image_urls)
         collected_urls: List[str] = []
         seen: Set[str] = set()
 
@@ -357,14 +361,14 @@ class AuctionScraper:
 
         try:
             logger.info("[Copart] Extracting images from %s", listing.url)
-            await page.goto(listing.url, wait_until="domcontentloaded", timeout=60000)
-            await wait_for_cloudflare_or_waf(page)
-            await human_delay(2.5, 4.5)
+            await page.goto(listing.url, wait_until="domcontentloaded", timeout=45000)
+            await wait_for_cloudflare_or_waf(page, timeout_sec=10)
+            await human_delay(2.0, 3.5)
 
             try:
                 await page.wait_for_selector(
                     'img[src*="copart"], .p-galleria-item img, #show-img',
-                    timeout=15000,
+                    timeout=10000,
                 )
             except Exception:
                 pass
@@ -398,6 +402,14 @@ class AuctionScraper:
             logger.error("[Copart] Error extracting images for %s: %s", listing.url, exc)
         finally:
             await page.close()
+
+        if not collected_urls and fallback_urls:
+            logger.info(
+                "[Copart] Detail page WAF blocked; using %d fallback image(s) from search results for lot %s",
+                len(fallback_urls),
+                listing.lot_id,
+            )
+            collected_urls = fallback_urls
 
         listing.image_urls = collected_urls[: self.max_images]
         logger.info(
@@ -433,50 +445,65 @@ class AuctionScraper:
             except Exception:
                 logger.debug("[IAAI] Primary vehicle detail selector timed out, scrolling...")
 
-            await auto_scroll(page, steps=4)
-            await human_delay(1.5, 2.5)
+            for page_num in range(1, 3):
+                await auto_scroll(page, steps=8)
+                await human_delay(1.5, 2.5)
 
-            anchors = await page.eval_on_selector_all(
-                'a[href*="VehicleDetail"], a[href*="vehicledetail"]',
-                """elements => elements.map(el => {
-                    const card = el.closest('.table-row, .card, tr, li, div.row') || el.parentElement;
-                    const img = card ? card.querySelector('img[src*="vis.iaai.com"], img[data-src*="vis.iaai.com"]') : null;
-                    const imgSrc = img ? (img.getAttribute('data-src') || img.src || '') : '';
-                    return {
-                        href: el.href,
-                        text: (el.innerText || '').trim(),
-                        imgSrc: imgSrc
-                    };
-                })""",
-            )
-            for item in anchors:
-                href = item.get("href", "")
-                match = re.search(r"/VehicleDetail/([A-Za-z0-9_~-]+)", href, re.IGNORECASE)
-                if match:
-                    raw_id = match.group(1)
-                    lot_id = raw_id.split("~")[0]
-                    full_url = urljoin("https://www.iaai.com", href)
-                    img_src = item.get("imgSrc", "")
-                    if lot_id not in listings_by_id:
-                        listings_by_id[lot_id] = VehicleListing(
-                            source="IAAI",
-                            lot_id=lot_id,
-                            url=full_url,
-                            title=item.get("text") or f"IAAI Vehicle #{lot_id}",
-                        )
-                    elif item.get("text") and listings_by_id[lot_id].title.startswith("IAAI Vehicle"):
-                        listings_by_id[lot_id].title = item["text"]
+                anchors = await page.eval_on_selector_all(
+                    'a[href*="VehicleDetail"], a[href*="vehicledetail"]',
+                    """elements => elements.map(el => {
+                        const card = el.closest('.table-row, .card, tr, li, div.row') || el.parentElement;
+                        const img = card ? card.querySelector('img[src*="vis.iaai.com"], img[data-src*="vis.iaai.com"]') : null;
+                        const imgSrc = img ? (img.getAttribute('data-src') || img.src || '') : '';
+                        return {
+                            href: el.href,
+                            text: (el.innerText || '').trim(),
+                            imgSrc: imgSrc
+                        };
+                    })""",
+                )
+                for item in anchors:
+                    href = item.get("href", "")
+                    match = re.search(r"/VehicleDetail/([A-Za-z0-9_~-]+)", href, re.IGNORECASE)
+                    if match:
+                        raw_id = match.group(1)
+                        lot_id = raw_id.split("~")[0]
+                        full_url = urljoin("https://www.iaai.com", href)
+                        img_src = item.get("imgSrc", "")
+                        if lot_id not in listings_by_id:
+                            listings_by_id[lot_id] = VehicleListing(
+                                source="IAAI",
+                                lot_id=lot_id,
+                                url=full_url,
+                                title=item.get("text") or f"IAAI Vehicle #{lot_id}",
+                            )
+                        elif item.get("text") and listings_by_id[lot_id].title.startswith("IAAI Vehicle"):
+                            listings_by_id[lot_id].title = item["text"]
 
-                    if img_src and "vis.iaai.com" in img_src and not listings_by_id[lot_id].image_urls:
-                        # Expand ~I1 thumbnail into I1..I{max_images} full-resolution URLs
-                        base_img = normalize_iaai_image_url(img_src)
-                        if "~I1" in base_img:
-                            listings_by_id[lot_id].image_urls = [
-                                base_img.replace("~I1", f"~I{idx}")
-                                for idx in range(1, self.max_images + 1)
-                            ]
+                        if img_src and "vis.iaai.com" in img_src and not listings_by_id[lot_id].image_urls:
+                            base_img = normalize_iaai_image_url(img_src)
+                            if "~I1" in base_img:
+                                listings_by_id[lot_id].image_urls = [
+                                    base_img.replace("~I1", f"~I{idx}")
+                                    for idx in range(1, self.max_images + 1)
+                                ]
+                            else:
+                                listings_by_id[lot_id].image_urls = [base_img]
+
+                # Check if a Next Page button is present and enabled on IAAI
+                if page_num < 2:
+                    try:
+                        next_btn = page.locator(
+                            'button.btn-next:not([disabled]), a[aria-label*="Next"]:not(.disabled), li.pagination-next:not(.disabled) a'
+                        ).first
+                        if await next_btn.count() > 0 and await next_btn.is_visible():
+                            logger.info("[IAAI] Navigating to page %d of search results...", page_num + 1)
+                            await next_btn.click()
+                            await human_delay(3.0, 4.5)
                         else:
-                            listings_by_id[lot_id].image_urls = [base_img]
+                            break
+                    except Exception:
+                        break
         except Exception as exc:
             logger.error("[IAAI] Error scraping search results: %s", exc)
         finally:
