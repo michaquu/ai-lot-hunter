@@ -8,7 +8,9 @@ from typing import Dict, List, Set
 
 from analyzer import GeminiVisionAnalyzer, VisionAnalysisResult
 from config import (
+    FIREBASE_API_KEY,
     FIREBASE_PROJECT_ID,
+    FIREBASE_USER_ID,
     HEADLESS,
     MAX_AGE_HOURS,
     MAX_IMAGES_PER_LISTING,
@@ -16,6 +18,7 @@ from config import (
     PASSED_CARS_FILE,
     PASSED_CARS_MD_FILE,
     SEEN_LOTS_FILE,
+    get_rtdb_urls,
 )
 import requests
 from notifier import notify_result, send_telegram_alert
@@ -66,8 +69,8 @@ def save_passed_car(
             existing = []
 
     vin_val = (listing.vin or result.vin_from_photo or "").strip()
-    lookup_query = vin_val if (vin_val and "*" not in vin_val) else listing.lot_id
-    bidcars_url = f"https://bid.cars/pl/search/results?search-type=filters&q={lookup_query}"
+    bidcars_prefix = "0" if listing.source.lower() == "iaai" else "1"
+    bidcars_url = f"https://bid.cars/pl/lot/{bidcars_prefix}-{listing.lot_id}"
 
     entry = {
         "id": f"{listing.source.lower()}_{listing.lot_id}",
@@ -86,13 +89,30 @@ def save_passed_car(
         "image_urls": listing.image_urls,
     }
 
-    # Optional: Push to free Firebase Spark Firestore (REST API, 0 Cloud Functions needed)
+    # Push to free Firebase Spark Database (Realtime DB + Firestore REST API, 0 Cloud Functions needed)
     if FIREBASE_PROJECT_ID:
+        doc_id = entry["id"]
+        # 1. Sync to Firebase Realtime Database (`/cars/{doc_id}.json` and `/{userId}/cars/{doc_id}.json`)
+        for rtdb_base in get_rtdb_urls():
+            try:
+                r = requests.put(f"{rtdb_base}/cars/{doc_id}.json", json=entry, timeout=6)
+                if r.ok:
+                    if FIREBASE_USER_ID:
+                        requests.put(
+                            f"{rtdb_base}/{FIREBASE_USER_ID}/cars/{doc_id}.json",
+                            json=entry,
+                            timeout=6,
+                        )
+                    break
+            except Exception:
+                pass
+
+        # 2. Also sync to Firestore if enabled
         try:
-            doc_id = entry["id"]
-            fs_url = (
+            key_param = f"?key={FIREBASE_API_KEY}" if FIREBASE_API_KEY else ""
+            base_docs_url = (
                 f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}"
-                f"/databases/(default)/documents/cars/{doc_id}"
+                f"/databases/(default)/documents"
             )
             fs_payload = {
                 "fields": {
@@ -102,7 +122,13 @@ def save_passed_car(
                     "lot_id": {"stringValue": str(entry["lot_id"])},
                 }
             }
-            requests.patch(fs_url, json=fs_payload, timeout=8)
+            requests.patch(f"{base_docs_url}/cars/{doc_id}{key_param}", json=fs_payload, timeout=6)
+            if FIREBASE_USER_ID:
+                requests.patch(
+                    f"{base_docs_url}/users/{FIREBASE_USER_ID}/cars/{doc_id}{key_param}",
+                    json=fs_payload,
+                    timeout=6,
+                )
         except Exception as exc:
             logger.debug("Firestore sync skipped: %s", exc)
 

@@ -10,7 +10,26 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 SEARCH_CONFIG_FILE = "search_config.json"
-FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "").strip()
+FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "ai-lot-hunter").strip() or "ai-lot-hunter"
+FIREBASE_API_KEY = (
+    os.getenv("FIREBASE_API_KEY", "").strip()
+    or os.getenv("VITE_FIREBASE_API_KEY", "").strip()
+    or os.getenv("FIREBASE_KEY", "").strip()
+)
+FIREBASE_DATABASE_URL = (
+    os.getenv("FIREBASE_DATABASE_URL", "").strip()
+    or os.getenv("VITE_FIREBASE_DATABASE_URL", "").strip()
+)
+FIREBASE_USER_ID = os.getenv("FIREBASE_USER_ID", "").strip()
+
+
+def get_rtdb_urls() -> list:
+    if FIREBASE_DATABASE_URL:
+        return [FIREBASE_DATABASE_URL.rstrip("/")]
+    return [
+        f"https://{FIREBASE_PROJECT_ID}-default-rtdb.europe-west1.firebasedatabase.app",
+        f"https://{FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com",
+    ]
 
 
 def build_copart_url_from_filters(cfg: dict) -> str:
@@ -79,21 +98,54 @@ def load_active_search_config() -> dict:
             pass
 
     if FIREBASE_PROJECT_ID:
-        try:
-            url = (
-                f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}"
-                f"/databases/(default)/documents/settings/scraper"
-            )
-            resp = requests.get(url, timeout=8)
-            if resp.ok:
-                doc = resp.json().get("fields", {})
-                if "config_json" in doc and "stringValue" in doc["config_json"]:
-                    remote_cfg = json.loads(doc["config_json"]["stringValue"])
-                    if isinstance(remote_cfg, dict):
-                        cfg.update(remote_cfg)
-                        logger.info("[Config] Loaded live search filters from Firebase Firestore.")
-        except Exception as exc:
-            logger.debug("[Config] Could not fetch Firestore settings: %s", exc)
+        # 1. Try Firebase Realtime Database first (`/{userId}/config.json` or `/active_config/config.json`)
+        rtdb_paths = []
+        if FIREBASE_USER_ID:
+            rtdb_paths.append(f"/{FIREBASE_USER_ID}/config.json")
+        rtdb_paths.append("/active_config/config.json")
+
+        loaded_from_rtdb = False
+        for base_url in get_rtdb_urls():
+            if loaded_from_rtdb:
+                break
+            for rtdb_path in rtdb_paths:
+                try:
+                    resp = requests.get(f"{base_url}{rtdb_path}", timeout=6)
+                    if resp.ok:
+                        remote_cfg = resp.json()
+                        if isinstance(remote_cfg, dict) and remote_cfg:
+                            cfg.update(remote_cfg)
+                            logger.info("[Config] Loaded live search filters from Firebase Realtime DB (%s).", rtdb_path)
+                            loaded_from_rtdb = True
+                            break
+                except Exception:
+                    pass
+
+        # 2. Fallback to Cloud Firestore (`users/{userId}` or `settings/scraper`)
+        if not loaded_from_rtdb:
+            key_param = f"?key={FIREBASE_API_KEY}" if FIREBASE_API_KEY else ""
+            doc_paths = []
+            if FIREBASE_USER_ID:
+                doc_paths.append(f"users/{FIREBASE_USER_ID}")
+            doc_paths.append("settings/scraper")
+
+            for doc_path in doc_paths:
+                try:
+                    url = (
+                        f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}"
+                        f"/databases/(default)/documents/{doc_path}{key_param}"
+                    )
+                    resp = requests.get(url, timeout=6)
+                    if resp.ok:
+                        doc = resp.json().get("fields", {})
+                        if "config_json" in doc and "stringValue" in doc["config_json"]:
+                            remote_cfg = json.loads(doc["config_json"]["stringValue"])
+                            if isinstance(remote_cfg, dict):
+                                cfg.update(remote_cfg)
+                                logger.info("[Config] Loaded live search filters from Firebase Firestore (%s).", doc_path)
+                                break
+                except Exception as exc:
+                    logger.debug("[Config] Could not fetch Firestore settings (%s): %s", doc_path, exc)
 
     return cfg
 

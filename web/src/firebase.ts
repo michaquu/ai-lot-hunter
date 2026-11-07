@@ -16,6 +16,7 @@ const GITHUB_PASSED_CARS_URL =
 const GITHUB_SEARCH_CONFIG_URL =
   "https://raw.githubusercontent.com/michaquu/copart-ai-scraper/main/search_config.json";
 
+const LOCAL_UID_KEY = "lot_hunter_uid_v1";
 const LOCAL_SWIPES_KEY = "autoswipe_swipes_v1";
 const LOCAL_CONFIG_KEY = "autoswipe_search_config_v1";
 const LOCAL_FIREBASE_CFG_KEY = "autoswipe_firebase_cfg_v1";
@@ -23,31 +24,144 @@ const LOCAL_FIREBASE_CFG_KEY = "autoswipe_firebase_cfg_v1";
 export interface FirebaseCreds {
   apiKey: string;
   projectId: string;
+  databaseUrl?: string;
   appId?: string;
 }
 
+/**
+ * Returns or generates a unique User ID used as the root key in the database: `/{userId}`
+ */
+export function getUserId(): string {
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    const urlUid = params.get("uid")?.trim();
+    if (urlUid) {
+      localStorage.setItem(LOCAL_UID_KEY, urlUid);
+      return urlUid;
+    }
+  }
+
+  try {
+    const existing = localStorage.getItem(LOCAL_UID_KEY)?.trim();
+    if (existing) return existing;
+  } catch {
+    // ignore
+  }
+
+  const envUid = (import.meta.env.VITE_FIREBASE_USER_ID || "").trim();
+  if (envUid) {
+    try {
+      localStorage.setItem(LOCAL_UID_KEY, envUid);
+    } catch {
+      // ignore
+    }
+    return envUid;
+  }
+
+  const randomPart =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID().replace(/-/g, "").slice(0, 10)
+      : Math.random().toString(36).substring(2, 12);
+  const newUid = `user_${randomPart}`;
+  try {
+    localStorage.setItem(LOCAL_UID_KEY, newUid);
+  } catch {
+    // ignore
+  }
+  return newUid;
+}
+
+export function setUserId(newUid: string): string {
+  const cleaned = newUid.trim().replace(/[^a-zA-Z0-9_-]/g, "");
+  if (!cleaned) return getUserId();
+  localStorage.setItem(LOCAL_UID_KEY, cleaned);
+  return cleaned;
+}
+
 export function getSavedFirebaseCreds(): FirebaseCreds {
+  const envApiKey = import.meta.env.VITE_FIREBASE_API_KEY || "";
+  const envProjectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || "ai-lot-hunter";
+  const envDbUrl = import.meta.env.VITE_FIREBASE_DATABASE_URL || "";
+  const envAppId = import.meta.env.VITE_FIREBASE_APP_ID || "";
+
   try {
     const raw = localStorage.getItem(LOCAL_FIREBASE_CFG_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.projectId) return parsed;
+      return {
+        apiKey: parsed.apiKey || envApiKey,
+        projectId: parsed.projectId || envProjectId,
+        databaseUrl: parsed.databaseUrl || envDbUrl,
+        appId: parsed.appId || envAppId,
+      };
     }
   } catch {
     // ignore
   }
   return {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
-    appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+    apiKey: envApiKey,
+    projectId: envProjectId,
+    databaseUrl: envDbUrl,
+    appId: envAppId,
   };
 }
 
 export function saveFirebaseCreds(creds: FirebaseCreds): void {
   localStorage.setItem(LOCAL_FIREBASE_CFG_KEY, JSON.stringify(creds));
+  dbInstance = null;
+  resolvedRtdbUrl = creds.databaseUrl || null;
 }
 
 let dbInstance: Firestore | null = null;
+let resolvedRtdbUrl: string | null = null;
+
+/**
+ * Candidate Realtime Database base URLs for the Firebase project (supports both Europe and US regions + Hosting init.json)
+ */
+async function getRealtimeDbBaseUrl(): Promise<string | null> {
+  if (resolvedRtdbUrl) return resolvedRtdbUrl;
+
+  const creds = getSavedFirebaseCreds();
+  if (creds.databaseUrl) {
+    resolvedRtdbUrl = creds.databaseUrl.replace(/\/+$/, "");
+    return resolvedRtdbUrl;
+  }
+
+  // Try Firebase Hosting auto-init endpoint if running on *.web.app
+  try {
+    const initRes = await fetch("/__/firebase/init.json");
+    if (initRes.ok) {
+      const initJson = await initRes.json();
+      if (initJson.databaseURL) {
+        resolvedRtdbUrl = String(initJson.databaseURL).replace(/\/+$/, "");
+        return resolvedRtdbUrl;
+      }
+    }
+  } catch {
+    // ignore on localhost
+  }
+
+  const pid = creds.projectId || "ai-lot-hunter";
+  const candidates = [
+    `https://${pid}-default-rtdb.europe-west1.firebasedatabase.app`,
+    `https://${pid}-default-rtdb.firebaseio.com`,
+  ];
+
+  for (const base of candidates) {
+    try {
+      const probe = await fetch(`${base}/.settings/rules.json?shallow=true`, { method: "GET" });
+      if (probe.status !== 404) {
+        resolvedRtdbUrl = base;
+        return resolvedRtdbUrl;
+      }
+    } catch {
+      // try next
+    }
+  }
+
+  resolvedRtdbUrl = candidates[0];
+  return resolvedRtdbUrl;
+}
 
 export function getDb(): Firestore | null {
   if (dbInstance) return dbInstance;
@@ -63,6 +177,9 @@ export function getDb(): Firestore | null {
             apiKey: creds.apiKey || "AIzaSyDummyKeyForFirestoreSpark",
             projectId: creds.projectId,
             authDomain: `${creds.projectId}.firebaseapp.com`,
+            databaseURL:
+              creds.databaseUrl || `https://${creds.projectId}-default-rtdb.europe-west1.firebasedatabase.app`,
+            storageBucket: `${creds.projectId}.firebasestorage.app`,
           });
     dbInstance = getFirestore(app);
     return dbInstance;
@@ -87,7 +204,7 @@ export const FALLBACK_CARS: CarListing[] = [
     damage_assessment:
       "Side impact damage affecting the right front fender and passenger door, airbags intact and no major structural damage.",
     url: "https://www.iaai.com/VehicleDetail/46932215~US",
-    price_check_url: "https://bid.cars/pl/search/results?search-type=filters&q=46932215",
+    price_check_url: "https://bid.cars/pl/lot/0-46932215",
     image_urls: [
       "https://vis.iaai.com/resizer?imageKeys=46932215~SID~I1&width=800&height=600",
       "https://vis.iaai.com/resizer?imageKeys=46932215~SID~I2&width=800&height=600",
@@ -111,51 +228,83 @@ export const FALLBACK_CARS: CarListing[] = [
     damage_assessment:
       "Damage limited to bolt-on components (front bumper cover, passenger headlight, passenger front fender). Cooling pack and radiator support straight, airbags intact.",
     url: "https://www.copart.com/lot/71903086",
-    price_check_url: "https://bid.cars/pl/search/results?search-type=filters&q=71903086",
+    price_check_url: "https://bid.cars/pl/lot/1-71903086",
     image_urls: [],
   },
 ];
 
 export async function fetchPassedCars(): Promise<CarListing[]> {
   const byId = new Map<string, CarListing>();
+  const userId = getUserId();
 
-  // 1. Fetch live passed_cars.json from GitHub repository
+  // 1. Fetch local /passed_cars.json or GitHub passed_cars.json
+  for (const url of [`/passed_cars.json?t=${Date.now()}`, `${GITHUB_PASSED_CARS_URL}?t=${Date.now()}`]) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (res.ok) {
+        const data: CarListing[] = await res.json();
+        if (Array.isArray(data)) {
+          for (const item of data) {
+            const id = item.id || `${item.source.toLowerCase()}_${item.lot_id}`;
+            byId.set(id, { ...item, id, image_urls: item.image_urls || [] });
+          }
+          break;
+        }
+      }
+    } catch {
+      // try next
+    }
+  }
+
+  // 2. Fetch from Firebase Realtime Database (`/{userId}/cars.json` and `/cars.json`)
   try {
-    const res = await fetch(`${GITHUB_PASSED_CARS_URL}?t=${Date.now()}`, {
-      cache: "no-store",
-    });
-    if (res.ok) {
-      const data: CarListing[] = await res.json();
-      if (Array.isArray(data)) {
-        for (const item of data) {
-          const id = item.id || `${item.source.toLowerCase()}_${item.lot_id}`;
-          byId.set(id, { ...item, id, image_urls: item.image_urls || [] });
+    const rtdbBase = await getRealtimeDbBaseUrl();
+    if (rtdbBase) {
+      for (const path of [`/${userId}/cars.json`, `/cars.json`]) {
+        const res = await fetch(`${rtdbBase}${path}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data === "object") {
+            for (const [k, val] of Object.entries(data)) {
+              const item = val as CarListing;
+              if (item && item.lot_id) {
+                const id = item.id || k;
+                byId.set(id, { ...item, id, image_urls: item.image_urls || [] });
+              }
+            }
+          }
         }
       }
     }
-  } catch (err) {
-    console.warn("GitHub passed_cars.json fetch fallback:", err);
+  } catch {
+    // ignore RTDB error
   }
 
-  // 2. Also fetch from Firebase Firestore 'cars' collection if connected
+  // 3. Also check Firestore if active
   const db = getDb();
   if (db) {
     try {
-      const snap = await getDocs(collection(db, "cars"));
-      snap.forEach((docSnap) => {
-        const raw = docSnap.data();
-        if (raw.car_json) {
-          try {
-            const parsed: CarListing = JSON.parse(raw.car_json);
-            const id = parsed.id || docSnap.id;
-            byId.set(id, { ...parsed, id, image_urls: parsed.image_urls || [] });
-          } catch {
-            // ignore malformed
+      const [userCarsSnap, globalCarsSnap] = await Promise.all([
+        getDocs(collection(db, "users", userId, "cars")),
+        getDocs(collection(db, "cars")),
+      ]);
+
+      for (const snap of [globalCarsSnap, userCarsSnap]) {
+        snap.forEach((docSnap) => {
+          const raw = docSnap.data();
+          if (raw.car_json) {
+            try {
+              const parsed: CarListing = JSON.parse(raw.car_json);
+              const id = parsed.id || docSnap.id;
+              byId.set(id, { ...parsed, id, image_urls: parsed.image_urls || [] });
+            } catch {
+              // ignore
+            }
           }
-        }
-      });
-    } catch (err) {
-      console.warn("Firestore cars fetch skipped:", err);
+        });
+      }
+    } catch {
+      // ignore
     }
   }
 
@@ -185,9 +334,7 @@ export function subscribeToNewCars(onCarsUpdate: (cars: CarListing[]) => void): 
           }
         }
       });
-      if (cars.length > 0) {
-        onCarsUpdate(cars);
-      }
+      if (cars.length > 0) onCarsUpdate(cars);
     });
   } catch {
     return () => {};
@@ -195,49 +342,91 @@ export function subscribeToNewCars(onCarsUpdate: (cars: CarListing[]) => void): 
 }
 
 export async function loadSwipes(): Promise<Record<string, SwipeRecord>> {
+  const userId = getUserId();
   let local: Record<string, SwipeRecord> = {};
   try {
-    const raw = localStorage.getItem(LOCAL_SWIPES_KEY);
+    const raw = localStorage.getItem(`${LOCAL_SWIPES_KEY}_${userId}`) || localStorage.getItem(LOCAL_SWIPES_KEY);
     if (raw) local = JSON.parse(raw);
   } catch {
     local = {};
   }
 
+  // 1. Load from Firebase Realtime Database root key: `/{userId}/swipes.json`
+  try {
+    const rtdbBase = await getRealtimeDbBaseUrl();
+    if (rtdbBase) {
+      const res = await fetch(`${rtdbBase}/${userId}/swipes.json`);
+      if (res.ok) {
+        const remote = await res.json();
+        if (remote && typeof remote === "object") {
+          const merged = { ...remote, ...local };
+          localStorage.setItem(`${LOCAL_SWIPES_KEY}_${userId}`, JSON.stringify(merged));
+          return merged;
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // 2. Fallback to Firestore `users/{userId}`
   const db = getDb();
   if (db) {
     try {
-      const docSnap = await getDoc(doc(db, "user_state", "swipes"));
+      const docSnap = await getDoc(doc(db, "users", userId));
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.swipes_json) {
           const remote = JSON.parse(data.swipes_json);
           const merged = { ...remote, ...local };
-          localStorage.setItem(LOCAL_SWIPES_KEY, JSON.stringify(merged));
+          localStorage.setItem(`${LOCAL_SWIPES_KEY}_${userId}`, JSON.stringify(merged));
           return merged;
         }
       }
-    } catch (err) {
-      console.warn("Firestore swipes load skipped:", err);
+    } catch {
+      // ignore
     }
   }
   return local;
 }
 
 export async function saveSwipes(swipes: Record<string, SwipeRecord>): Promise<void> {
-  localStorage.setItem(LOCAL_SWIPES_KEY, JSON.stringify(swipes));
+  const userId = getUserId();
+  localStorage.setItem(`${LOCAL_SWIPES_KEY}_${userId}`, JSON.stringify(swipes));
+
+  // 1. Save to Firebase Realtime Database under root user key `/{userId}/swipes.json`
+  try {
+    const rtdbBase = await getRealtimeDbBaseUrl();
+    if (rtdbBase) {
+      await fetch(`${rtdbBase}/${userId}.json`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId,
+          swipes,
+          updated_at: new Date().toISOString(),
+        }),
+      });
+    }
+  } catch {
+    // ignore
+  }
+
+  // 2. Also save to Firestore `users/{userId}` if active
   const db = getDb();
   if (db) {
     try {
       await setDoc(
-        doc(db, "user_state", "swipes"),
+        doc(db, "users", userId),
         {
+          user_id: userId,
           swipes_json: JSON.stringify(swipes),
           updated_at: new Date().toISOString(),
         },
         { merge: true }
       );
-    } catch (err) {
-      console.warn("Firestore swipes save skipped:", err);
+    } catch {
+      // ignore
     }
   }
 }
@@ -263,15 +452,35 @@ export const DEFAULT_SEARCH_CONFIG: SearchFilterConfig = {
 };
 
 export async function loadSearchFilterConfig(): Promise<SearchFilterConfig> {
+  const userId = getUserId();
+
+  // 1. Load from Firebase Realtime Database root key: `/{userId}/config.json`
+  try {
+    const rtdbBase = await getRealtimeDbBaseUrl();
+    if (rtdbBase) {
+      const res = await fetch(`${rtdbBase}/${userId}/config.json`);
+      if (res.ok) {
+        const remote = await res.json();
+        if (remote && typeof remote === "object") {
+          localStorage.setItem(`${LOCAL_CONFIG_KEY}_${userId}`, JSON.stringify(remote));
+          return { ...DEFAULT_SEARCH_CONFIG, ...remote };
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // 2. Fallback to Firestore `users/{userId}`
   const db = getDb();
   if (db) {
     try {
-      const docSnap = await getDoc(doc(db, "settings", "scraper"));
-      if (docSnap.exists()) {
-        const data = docSnap.data();
+      const userSnap = await getDoc(doc(db, "users", userId));
+      if (userSnap.exists()) {
+        const data = userSnap.data();
         if (data.config_json) {
           const parsed = JSON.parse(data.config_json);
-          localStorage.setItem(LOCAL_CONFIG_KEY, JSON.stringify(parsed));
+          localStorage.setItem(`${LOCAL_CONFIG_KEY}_${userId}`, JSON.stringify(parsed));
           return { ...DEFAULT_SEARCH_CONFIG, ...parsed };
         }
       }
@@ -281,7 +490,8 @@ export async function loadSearchFilterConfig(): Promise<SearchFilterConfig> {
   }
 
   try {
-    const localRaw = localStorage.getItem(LOCAL_CONFIG_KEY);
+    const localRaw =
+      localStorage.getItem(`${LOCAL_CONFIG_KEY}_${userId}`) || localStorage.getItem(LOCAL_CONFIG_KEY);
     if (localRaw) {
       return { ...DEFAULT_SEARCH_CONFIG, ...JSON.parse(localRaw) };
     }
@@ -303,25 +513,70 @@ export async function loadSearchFilterConfig(): Promise<SearchFilterConfig> {
 }
 
 export async function saveSearchFilterConfig(cfg: SearchFilterConfig): Promise<boolean> {
-  localStorage.setItem(LOCAL_CONFIG_KEY, JSON.stringify(cfg));
+  const userId = getUserId();
+  localStorage.setItem(`${LOCAL_CONFIG_KEY}_${userId}`, JSON.stringify(cfg));
+  let savedToCloud = false;
+
+  // 1. Save to Firebase Realtime Database under root user key `/{userId}` and `/active_config`
+  try {
+    const rtdbBase = await getRealtimeDbBaseUrl();
+    if (rtdbBase) {
+      const [r1] = await Promise.all([
+        fetch(`${rtdbBase}/${userId}.json`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: userId,
+            config: cfg,
+            updated_at: new Date().toISOString(),
+          }),
+        }),
+        fetch(`${rtdbBase}/active_config.json`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            active_user_id: userId,
+            config: cfg,
+            updated_at: new Date().toISOString(),
+          }),
+        }),
+      ]);
+      if (r1.ok) savedToCloud = true;
+    }
+  } catch {
+    // ignore
+  }
+
+  // 2. Also save to Firestore `users/{userId}` and `settings/scraper` if active
   const db = getDb();
   if (db) {
     try {
-      await setDoc(
-        doc(db, "settings", "scraper"),
-        {
-          config_json: JSON.stringify(cfg),
-          updated_at: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-      return true;
-    } catch (err) {
-      console.error("Failed to save config to Firestore:", err);
-      return false;
+      await Promise.all([
+        setDoc(
+          doc(db, "users", userId),
+          {
+            user_id: userId,
+            config_json: JSON.stringify(cfg),
+            updated_at: new Date().toISOString(),
+          },
+          { merge: true }
+        ),
+        setDoc(
+          doc(db, "settings", "scraper"),
+          {
+            active_user_id: userId,
+            config_json: JSON.stringify(cfg),
+            updated_at: new Date().toISOString(),
+          },
+          { merge: true }
+        ),
+      ]);
+      savedToCloud = true;
+    } catch {
+      // ignore
     }
   }
-  return false;
+  return savedToCloud;
 }
 
 export function generateCopartUrl(cfg: SearchFilterConfig): string {

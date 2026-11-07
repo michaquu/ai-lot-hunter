@@ -47,8 +47,8 @@ def send_telegram_alert(listing: VehicleListing, analysis: VisionAnalysisResult)
         else "Przeróbki / Tuning: Brak (seria)\n"
     )
     vin_display = listing.vin or analysis.vin_from_photo or "Ukryty (sprawdź po Lot ID)"
-    lookup_query = listing.vin if (listing.vin and "*" not in listing.vin) else listing.lot_id
-    bidcars_url = f"https://bid.cars/pl/search/results?search-type=filters&q={lookup_query}"
+    bidcars_prefix = "0" if listing.source.lower() == "iaai" else "1"
+    bidcars_url = f"https://bid.cars/pl/lot/{bidcars_prefix}-{listing.lot_id}"
 
     message = (
         f"✅ DODGE CHALLENGER MATCH ({listing.source})\n\n"

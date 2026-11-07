@@ -30,6 +30,8 @@ import {
   getSavedFirebaseCreds,
   saveFirebaseCreds,
   subscribeToNewCars,
+  getUserId,
+  setUserId,
 } from "./firebase";
 
 type ActiveTab = "swipe" | "liked" | "archived" | "settings";
@@ -69,6 +71,7 @@ export default function App() {
   const dragStartX = useRef<number | null>(null);
 
   // Filter & Firebase Settings state
+  const [userId, setUserIdState] = useState<string>(getUserId());
   const [filterCfg, setFilterCfg] = useState<SearchFilterConfig | null>(null);
   const [fbProjectId, setFbProjectId] = useState<string>(getSavedFirebaseCreds().projectId);
   const [fbApiKey, setFbApiKey] = useState<string>(getSavedFirebaseCreds().apiKey);
@@ -250,6 +253,11 @@ export default function App() {
       );
     }
     return [];
+  };
+
+  const getBidCarsUrl = (car: CarListing): string => {
+    const prefix = car.source.toLowerCase() === "iaai" ? "0" : "1";
+    return `https://bid.cars/pl/lot/${prefix}-${car.lot_id}`;
   };
 
   return (
@@ -489,7 +497,7 @@ export default function App() {
                             <ExternalLink className="w-3.5 h-3.5" /> Otwórz {currentCar.source}
                           </a>
                           <a
-                            href={currentCar.price_check_url}
+                            href={getBidCarsUrl(currentCar)}
                             target="_blank"
                             rel="noreferrer"
                             onPointerDown={(e) => e.stopPropagation()}
@@ -545,7 +553,11 @@ export default function App() {
               </h2>
               {likedCars.length > 0 && (
                 <a
-                  href="https://bid.cars/pl/search/results?search-type=filters&q=Dodge+Challenger"
+                  href={`https://bid.cars/pl/search/results?search-type=filters&status=All&type=Automobile&make=${encodeURIComponent(
+                    filterCfg?.make || "Dodge"
+                  )}&model=${encodeURIComponent(filterCfg?.model || "Challenger")}&year-from=${
+                    filterCfg?.year_from || 2019
+                  }&year-to=${filterCfg?.year_to || 2027}&auction-type=All`}
                   target="_blank"
                   rel="noreferrer"
                   className="text-xs text-amber-400 hover:underline flex items-center gap-1 font-medium"
@@ -612,7 +624,7 @@ export default function App() {
                           <ExternalLink className="w-3.5 h-3.5" /> Aukcja
                         </a>
                         <a
-                          href={car.price_check_url}
+                          href={getBidCarsUrl(car)}
                           target="_blank"
                           rel="noreferrer"
                           className="flex-1 py-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-semibold text-center flex items-center justify-center gap-1"
@@ -674,7 +686,7 @@ export default function App() {
 
                     <div className="flex items-center gap-2">
                       <a
-                        href={car.price_check_url}
+                        href={getBidCarsUrl(car)}
                         target="_blank"
                         rel="noreferrer"
                         className="flex-1 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold text-center flex items-center justify-center gap-1"
@@ -924,41 +936,57 @@ export default function App() {
 
             {/* Free Firebase Spark Database Connection */}
             <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-2.5">
-              <h3 className="text-sm font-bold flex items-center gap-2 text-white">
-                <Database className="w-4 h-4 text-amber-400" />
-                Połączenie z darmową bazą Firebase Firestore (Spark $0)
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold flex items-center gap-2 text-white">
+                  <Database className="w-4 h-4 text-amber-400" />
+                  Baza Firebase ({fbProjectId || "ai-lot-hunter"})
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-semibold">
+                  Root key: users/{userId}
+                </span>
+              </div>
               <p className="text-[11px] text-zinc-400 leading-relaxed">
-                Wpisz swój <code>projectId</code> z konsoli Firebase (darmowy plan Spark, bez karty płatniczej).
-                Synchronizuje Ulubione, Schowek oraz filtry z GitHub Actions.
+                Każdy użytkownik ma swój unikalny klucz główny w bazie (<code>users/{userId}</code>).
+                Wpisz ten sam User ID na telefonie i komputerze (lub dodaj <code>FIREBASE_USER_ID={userId}</code> do <code>.env</code>), aby współdzielić Ulubione, Schowek i filtry.
               </p>
               <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="Firebase Project ID (np. copart-tinder-app)"
-                  value={fbProjectId}
-                  onChange={(e) => setFbProjectId(e.target.value.trim())}
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs font-mono"
-                />
-                <input
-                  type="text"
-                  placeholder="Firebase Web API Key (opcjonalnie)"
-                  value={fbApiKey}
-                  onChange={(e) => setFbApiKey(e.target.value.trim())}
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs font-mono"
-                />
+                <div>
+                  <label className="text-[11px] text-zinc-400 block mb-1">
+                    Twój unikalny User ID (Root Key w bazie):
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="np. user_xyz123"
+                      value={userId}
+                      onChange={(e) => setUserIdState(e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs font-mono text-emerald-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(userId)}
+                      className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold flex items-center gap-1"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      {copiedText === userId ? "Skopiowano" : "Kopiuj ID"}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
             <button
               type="button"
               onClick={async () => {
-                saveFirebaseCreds({ projectId: fbProjectId, apiKey: fbApiKey });
+                const cleanUid = setUserId(userId);
+                setUserIdState(cleanUid);
+                saveFirebaseCreds({ projectId: fbProjectId || "ai-lot-hunter", apiKey: fbApiKey });
                 const synced = await saveSearchFilterConfig(filterCfg);
+                await refreshData(true);
                 setSaveBanner(
                   synced
-                    ? "Zapisano w Firebase Firestore i pamięci urządzenia!"
-                    : "Zapisano lokalnie (podaj Firebase Project ID powyżej, aby synchronizować w chmurze)."
+                    ? `Zapisano w bazie Firebase pod kluczem users/${cleanUid}!`
+                    : `Zapisano lokalnie dla klucza ${cleanUid} (dodaj FIREBASE_API_KEY w .env).`
                 );
                 setTimeout(() => setSaveBanner(null), 4000);
               }}
