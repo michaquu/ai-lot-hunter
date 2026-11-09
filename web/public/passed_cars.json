@@ -1,5 +1,51 @@
 [
   {
+    "id": "copart_69400366",
+    "found_at": "2026-11-09 20:20 UTC",
+    "source": "Copart",
+    "lot_id": "69400366",
+    "vin": "2C3CDZAG2NH******",
+    "title": "2022 DODGE CHALLENGER SXT",
+    "color": "Pitch Black",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "The vehicle has side body damage on the driver's side and rear bumper damage, but airbags are intact and there is no catastrophic structural frame or engine damage.",
+    "url": "https://www.copart.com/lot/69400366",
+    "price_check_url": "https://bid.cars/pl/lot/1-69400366",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/0926/16fff17f67954b089fb1226db914ff82_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/0926/537a0c232e91406885bededb8df939c0_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/0926/713496dd00fd44f7a720ad543b13147f_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/0926/3f81e4715bb0488eb86a89771de081f6_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/0926/1d78f419f6564de5bfde78e4ff65ab7f_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/0926/49dd2bd1b9ee4cbaa2a7d89354fede51_ful.jpg"
+    ]
+  },
+  {
+    "id": "copart_69643526",
+    "found_at": "2026-11-09 20:19 UTC",
+    "source": "Copart",
+    "lot_id": "69643526",
+    "vin": "2C3CDZAG0KH******",
+    "title": "2019 DODGE CHALLENGER SXT",
+    "color": "Pitch Black",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "The vehicle has side/rear body damage with the rear bumper cover removed exposing the standard metal reinforcement beam, and no deployed airbags are visible.",
+    "url": "https://www.copart.com/lot/69643526",
+    "price_check_url": "https://bid.cars/pl/lot/1-69643526",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/75c8a1fa68324c23a2f36c53bacb5130_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/b2ab900cdea144558a2b79997362d626_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/96f65a7afc9c47d48586c213f323a7cc_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/96e00b375a7b4b93bece9f4f686836f1_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/6e2d413309614b51a3ec471938c19341_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/0c32c454c72c430dbaddca56cbbf839b_ful.jpg"
+    ]
+  },
+  {
     "id": "iaai_46861404",
     "found_at": "2026-11-09 11:17 UTC",
     "source": "IAAI",
