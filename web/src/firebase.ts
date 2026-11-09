@@ -12,9 +12,9 @@ import {
 import { CarListing, SearchFilterConfig, SwipeRecord } from "./types";
 
 const GITHUB_PASSED_CARS_URL =
-  "https://raw.githubusercontent.com/michaquu/copart-ai-scraper/main/passed_cars.json";
+  "https://raw.githubusercontent.com/michaquu/ai-lot-hunter/main/passed_cars.json";
 const GITHUB_SEARCH_CONFIG_URL =
-  "https://raw.githubusercontent.com/michaquu/copart-ai-scraper/main/search_config.json";
+  "https://raw.githubusercontent.com/michaquu/ai-lot-hunter/main/search_config.json";
 
 const LOCAL_UID_KEY = "lot_hunter_uid_v1";
 const LOCAL_SWIPES_KEY = "autoswipe_swipes_v1";

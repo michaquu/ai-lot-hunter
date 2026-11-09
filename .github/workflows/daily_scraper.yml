@@ -78,36 +78,11 @@ jobs:
           cp passed_cars.json /tmp/passed_cars_run.json || true
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -- .
           git fetch origin main
           git checkout -B main origin/main
-          python -c '
-          import json, pathlib
-          from main import render_passed_cars_markdown
-
-          # Merge seen_lots.json
-          p_repo = pathlib.Path("seen_lots.json")
-          p_run = pathlib.Path("/tmp/seen_lots_run.json")
-          s_repo = set(json.loads(p_repo.read_text())) if p_repo.exists() else set()
-          s_run = set(json.loads(p_run.read_text())) if p_run.exists() else set()
-          merged = sorted(s_repo | s_run)
-          p_repo.write_text(json.dumps(merged, indent=2) + "\n")
-
-          # Merge passed_cars.json and regenerate PASSED_CARS.md
-          pc_repo = pathlib.Path("passed_cars.json")
-          pc_run = pathlib.Path("/tmp/passed_cars_run.json")
-          list_repo = json.loads(pc_repo.read_text()) if pc_repo.exists() else []
-          list_run = json.loads(pc_run.read_text()) if pc_run.exists() else []
-          seen_keys = set()
-          combined = []
-          for item in list_run + list_repo:
-              key = f"{str(item.get(\"source\", \"\")).lower()}:{item.get(\"lot_id\", \"\")}"
-              if key not in seen_keys:
-                  seen_keys.add(key)
-                  combined.append(item)
-          pc_repo.write_text(json.dumps(combined, indent=2, ensure_ascii=False) + "\n")
-          render_passed_cars_markdown(combined, "PASSED_CARS.md")
-          '
-          git add seen_lots.json passed_cars.json PASSED_CARS.md
+          python -c "from main import merge_ci_run_files; merge_ci_run_files()"
+          git add seen_lots.json passed_cars.json PASSED_CARS.md web/public/passed_cars.json
           if ! git diff --staged --quiet; then
             git commit -m "chore: update seen_lots.json and passed_cars [skip ci]"
             git push origin HEAD:main

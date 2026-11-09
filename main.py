@@ -180,6 +180,39 @@ def render_passed_cars_markdown(records: List[Dict], md_filepath: str = PASSED_C
     Path(md_filepath).write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def merge_ci_run_files(
+    seen_run_file: str = "/tmp/seen_lots_run.json",
+    passed_run_file: str = "/tmp/passed_cars_run.json",
+) -> None:
+    """Merge seen_lots.json and passed_cars.json after git fetch in GitHub Actions."""
+    p_repo = Path(SEEN_LOTS_FILE)
+    p_run = Path(seen_run_file)
+    s_repo = set(json.loads(p_repo.read_text(encoding="utf-8"))) if p_repo.exists() else set()
+    s_run = set(json.loads(p_run.read_text(encoding="utf-8"))) if p_run.exists() else set()
+    merged = sorted(s_repo | s_run)
+    p_repo.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
+
+    pc_repo = Path(PASSED_CARS_FILE)
+    pc_run = Path(passed_run_file)
+    list_repo = json.loads(pc_repo.read_text(encoding="utf-8")) if pc_repo.exists() else []
+    list_run = json.loads(pc_run.read_text(encoding="utf-8")) if pc_run.exists() else []
+    seen_keys = set()
+    combined = []
+    for item in list_run + list_repo:
+        src = str(item.get("source", "")).lower()
+        lid = str(item.get("lot_id", ""))
+        key = f"{src}:{lid}"
+        if key not in seen_keys:
+            seen_keys.add(key)
+            combined.append(item)
+    serialized = json.dumps(combined, indent=2, ensure_ascii=False) + "\n"
+    pc_repo.write_text(serialized, encoding="utf-8")
+    web_pc = Path("web/public/passed_cars.json")
+    if web_pc.parent.exists():
+        web_pc.write_text(serialized, encoding="utf-8")
+    render_passed_cars_markdown(combined, PASSED_CARS_MD_FILE)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Automated Copart & IAAI Dodge Challenger Scraper + Gemini Vision Analyzer"
