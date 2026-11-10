@@ -1,5 +1,74 @@
 [
   {
+    "id": "iaai_47040910",
+    "found_at": "2026-11-10 16:03 UTC",
+    "source": "IAAI",
+    "lot_id": "47040910",
+    "vin": "2C3CDZAG2LH******",
+    "title": "2020 DODGE CHALLENGER SXT",
+    "color": "Red",
+    "color_approved": false,
+    "is_modified": true,
+    "modifications": "Rear window louvers, rear spoiler extension, custom steering wheel cover",
+    "damage_assessment": "Vehicle has teardown/removed rear quarter skin and bumper cover exposing undamaged rear impact bar. Airbags are fully intact and frame structure is sound. Passes color rule due to visible modifications (rear window louvers).",
+    "url": "https://www.iaai.com/VehicleDetail/47040910~US",
+    "price_check_url": "https://bid.cars/pl/lot/0-47040910",
+    "image_urls": [
+      "https://vis.iaai.com/resizer?imageKeys=47040910~SID~I1&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47040910~SID~I2&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47040910~SID~I3&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47040910~SID~I4&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47040910~SID~I5&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47040910~SID~I6&width=800&height=600"
+    ]
+  },
+  {
+    "id": "copart_70048226",
+    "found_at": "2026-11-10 16:02 UTC",
+    "source": "Copart",
+    "lot_id": "70048226",
+    "vin": "2C3CDZAG7KH******",
+    "title": "2019 DODGE CHALLENGER SXT",
+    "color": "Granite Gray",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "Vehicle has damage to the left rear quarter panel, trunk lid, and broken rear window. Airbags are intact and front end/engine structure is undamaged.",
+    "url": "https://www.copart.com/lot/70048226",
+    "price_check_url": "https://bid.cars/pl/lot/1-70048226",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/9fdf9cd70df64a01baac8b376b79d841_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/da6a45942bd644d582fcf7aa803ca38c_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/9fc015f35aee40679be6c802a913b293_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/71fd191bc75a4301bdf0cb95979d7bcb_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/0293caa941ae49738f83c236a92a9ff7_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/c9ffdf21d2f145e6b6acc16ddc17f415_ful.jpg"
+    ]
+  },
+  {
+    "id": "copart_71648966",
+    "found_at": "2026-11-10 16:02 UTC",
+    "source": "Copart",
+    "lot_id": "71648966",
+    "vin": "2C3CDZAG4PH******",
+    "title": "2023 DODGE CHALLENGER SXT",
+    "color": "Pitch Black",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "Moderate left side body damage primarily affecting the driver door and rear quarter panel. Frame, engine, and suspension remain intact with no deployed airbags, making this a clear repairable candidate.",
+    "url": "https://www.copart.com/lot/71648966",
+    "price_check_url": "https://bid.cars/pl/lot/1-71648966",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/914d53a5a54f420eafb1b79be861b524_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/fd99e4d063a54b6c885320f9f8084831_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/773e2a3c751046639746d604decba307_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/22543ffe3044462996a9e35d022427d8_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/b8ef891a69b6402083190bba7bb89475_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/8b4d93a85ae347c78ba034d332489710_ful.jpg"
+    ]
+  },
+  {
     "id": "copart_69400366",
     "found_at": "2026-11-09 20:20 UTC",
     "source": "Copart",
