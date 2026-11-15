@@ -1,5 +1,28 @@
 [
   {
+    "id": "copart_77375876",
+    "found_at": "2026-11-15 15:14 UTC",
+    "source": "Copart",
+    "lot_id": "77375876",
+    "vin": "2C3CDZGG9PH******",
+    "title": "2023 DODGE CHALLENGER SXT",
+    "color": "Pitch Black",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "Moderate front-end collision with a bent hood and missing front bumper cover; the core support, radiator, and frame rails appear intact with no airbag deployment, making it a standard repairable salvage.",
+    "url": "https://www.copart.com/lot/77375876",
+    "price_check_url": "https://bid.cars/pl/lot/1-77375876",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/e1d27d60f30144428471cb747420288a_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/b4d96f7dd73941618607ee506324fed3_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/1e4b25e548f047b6bfafd6964b99776c_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/bf73ba97b6c74f53a9cf0be6df450b25_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/72e71e3a0bc448b689b6b99471e0040f_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/92f132b4d31c47e59bdcbc25bde27e86_ful.jpg"
+    ]
+  },
+  {
     "id": "copart_73744006",
     "found_at": "2026-11-14 14:44 UTC",
     "source": "Copart",
