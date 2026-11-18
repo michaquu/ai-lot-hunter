@@ -1,5 +1,28 @@
 [
   {
+    "id": "iaai_47143022",
+    "found_at": "2026-11-18 16:59 UTC",
+    "source": "IAAI",
+    "lot_id": "47143022",
+    "vin": "2C3CDZJG3LH******",
+    "title": "2020 DODGE CHALLENGER GT",
+    "color": "Red",
+    "color_approved": false,
+    "is_modified": true,
+    "modifications": "Aftermarket black custom rims",
+    "damage_assessment": "The vehicle has minor front lower bumper/fascia damage with exposed cooling components, but airbags are intact and frame damage is absent. However, it fails the color requirement (Red) and has insufficient major modifications to bypass the color rule.",
+    "url": "https://www.iaai.com/VehicleDetail/47143022~US",
+    "price_check_url": "https://bid.cars/pl/lot/0-47143022",
+    "image_urls": [
+      "https://vis.iaai.com/resizer?imageKeys=47143022~SID~I1&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47143022~SID~I2&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47143022~SID~I3&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47143022~SID~I4&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47143022~SID~I5&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47143022~SID~I6&width=800&height=600"
+    ]
+  },
+  {
     "id": "copart_77375876",
     "found_at": "2026-11-15 15:14 UTC",
     "source": "Copart",
