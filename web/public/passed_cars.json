@@ -1,5 +1,51 @@
 [
   {
+    "id": "iaai_47136998",
+    "found_at": "2026-11-19 17:03 UTC",
+    "source": "IAAI",
+    "lot_id": "47136998",
+    "vin": "2C3CDZAG2PH******",
+    "title": "2023 DODGE CHALLENGER SXT",
+    "color": "Pitch Black",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "The vehicle has minor front-end damage with a cracked bumper cover and missing headlight assembly, but the structure and radiators remain intact. Airbags are completely untouched and intact, making this an ideal repairable project car.",
+    "url": "https://www.iaai.com/VehicleDetail/47136998~US",
+    "price_check_url": "https://bid.cars/pl/lot/0-47136998",
+    "image_urls": [
+      "https://vis.iaai.com/resizer?imageKeys=47136998~SID~I1&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47136998~SID~I2&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47136998~SID~I3&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47136998~SID~I4&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47136998~SID~I5&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47136998~SID~I6&width=800&height=600"
+    ]
+  },
+  {
+    "id": "iaai_47144186",
+    "found_at": "2026-11-19 17:02 UTC",
+    "source": "IAAI",
+    "lot_id": "47144186",
+    "vin": "2C3CDZAG7KH******",
+    "title": "2019 DODGE CHALLENGER SXT",
+    "color": "Pitch Black",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "Front-end collision damage with missing bumper components and a bent hood, but the core structure, radiator support, and frame rails appear intact with no airbags deployed.",
+    "url": "https://www.iaai.com/VehicleDetail/47144186~US",
+    "price_check_url": "https://bid.cars/pl/lot/0-47144186",
+    "image_urls": [
+      "https://vis.iaai.com/resizer?imageKeys=47144186~SID~I1&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47144186~SID~I2&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47144186~SID~I3&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47144186~SID~I4&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47144186~SID~I5&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47144186~SID~I6&width=800&height=600"
+    ]
+  },
+  {
     "id": "iaai_47143022",
     "found_at": "2026-11-18 16:59 UTC",
     "source": "IAAI",
