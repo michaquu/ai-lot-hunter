@@ -20,6 +20,36 @@ const LOCAL_UID_KEY = "lot_hunter_uid_v1";
 const LOCAL_SWIPES_KEY = "autoswipe_swipes_v1";
 const LOCAL_CONFIG_KEY = "autoswipe_search_config_v1";
 const LOCAL_FIREBASE_CFG_KEY = "autoswipe_firebase_cfg_v1";
+const LOCAL_NOTIFIED_CARS_KEY = "lot_hunter_notified_cars_v1";
+
+export function getNotifiedCarIds(): { initialized: boolean; ids: Set<string> } {
+  const userId = getUserId();
+  try {
+    const raw =
+      localStorage.getItem(`${LOCAL_NOTIFIED_CARS_KEY}_${userId}`) ||
+      localStorage.getItem(LOCAL_NOTIFIED_CARS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return { initialized: true, ids: new Set(parsed) };
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return { initialized: false, ids: new Set() };
+}
+
+export function saveNotifiedCarIds(ids: Set<string>): void {
+  const userId = getUserId();
+  try {
+    const arr = Array.from(ids);
+    localStorage.setItem(`${LOCAL_NOTIFIED_CARS_KEY}_${userId}`, JSON.stringify(arr));
+    localStorage.setItem(LOCAL_NOTIFIED_CARS_KEY, JSON.stringify(arr));
+  } catch {
+    // ignore
+  }
+}
 
 export interface FirebaseCreds {
   apiKey: string;
@@ -319,26 +349,45 @@ export async function fetchPassedCars(): Promise<CarListing[]> {
 
 export function subscribeToNewCars(onCarsUpdate: (cars: CarListing[]) => void): () => void {
   const db = getDb();
-  if (!db) return () => {};
+  let unsubFirestore = () => {};
 
-  try {
-    return onSnapshot(collection(db, "cars"), (snap) => {
-      const cars: CarListing[] = [];
-      snap.forEach((docSnap) => {
-        const raw = docSnap.data();
-        if (raw.car_json) {
-          try {
-            cars.push(JSON.parse(raw.car_json));
-          } catch {
-            // ignore
+  if (db) {
+    try {
+      unsubFirestore = onSnapshot(collection(db, "cars"), (snap) => {
+        const cars: CarListing[] = [];
+        snap.forEach((docSnap) => {
+          const raw = docSnap.data();
+          if (raw.car_json) {
+            try {
+              cars.push(JSON.parse(raw.car_json));
+            } catch {
+              // ignore
+            }
           }
-        }
+        });
+        if (cars.length > 0) onCarsUpdate(cars);
       });
-      if (cars.length > 0) onCarsUpdate(cars);
-    });
-  } catch {
-    return () => {};
+    } catch {
+      // ignore
+    }
   }
+
+  // Also listen to Service Worker messages when background sync detects new cars
+  const onSwMessage = (event: MessageEvent) => {
+    if (event.data && event.data.type === "NEW_CARS_FETCHED" && Array.isArray(event.data.cars)) {
+      onCarsUpdate(event.data.cars);
+    }
+  };
+  if (typeof navigator !== "undefined" && navigator.serviceWorker) {
+    navigator.serviceWorker.addEventListener("message", onSwMessage);
+  }
+
+  return () => {
+    unsubFirestore();
+    if (typeof navigator !== "undefined" && navigator.serviceWorker) {
+      navigator.serviceWorker.removeEventListener("message", onSwMessage);
+    }
+  };
 }
 
 export async function loadSwipes(): Promise<Record<string, SwipeRecord>> {

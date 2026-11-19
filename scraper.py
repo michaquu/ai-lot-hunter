@@ -225,40 +225,57 @@ class AuctionScraper:
         await apply_stealth(page)
 
         listings_by_lot: Dict[str, VehicleListing] = {}
+        captured_api: Dict[str, object] = {"url": "", "post_data": "", "headers": {}, "total": 0}
+
+        def ingest_copart_items(content_list: list) -> None:
+            for item in content_list:
+                if not isinstance(item, dict):
+                    continue
+                lot_num = str(
+                    item.get("ln") or item.get("lotNumberStr") or ""
+                ).strip()
+                if lot_num and lot_num.isdigit():
+                    title = (
+                        item.get("ld")
+                        or f"{item.get('lcy', '')} {item.get('mkn', 'DODGE')} {item.get('lm', 'CHALLENGER')}".strip()
+                    )
+                    created_dt = parse_copart_timestamp(item)
+                    lot_url = f"https://www.copart.com/lot/{lot_num}"
+                    thumb_url = normalize_copart_image_url(str(item.get("tims") or ""))
+                    initial_imgs = [thumb_url] if thumb_url.startswith("http") else []
+                    raw_vin = str(
+                        item.get("fv") or item.get("vin") or item.get("vn") or ""
+                    ).strip()
+                    listings_by_lot[lot_num] = VehicleListing(
+                        source="Copart",
+                        lot_id=lot_num,
+                        url=lot_url,
+                        title=title,
+                        vin=raw_vin,
+                        created_at=created_dt,
+                        image_urls=initial_imgs,
+                    )
 
         async def handle_response(response: Response) -> None:
             if "search-results" in response.url or "lotSearchResults" in response.url:
                 if "application/json" in response.headers.get("content-type", ""):
                     try:
                         data = await response.json()
-                        content_list = (
-                            data.get("data", {}).get("results", {}).get("content", [])
-                        )
-                        for item in content_list:
-                            lot_num = str(
-                                item.get("ln") or item.get("lotNumberStr") or ""
-                            ).strip()
-                            if lot_num and lot_num.isdigit():
-                                title = (
-                                    item.get("ld")
-                                    or f"{item.get('lcy', '')} {item.get('mkn', 'DODGE')} {item.get('lm', 'CHALLENGER')}".strip()
-                                )
-                                created_dt = parse_copart_timestamp(item)
-                                lot_url = f"https://www.copart.com/lot/{lot_num}"
-                                thumb_url = normalize_copart_image_url(str(item.get("tims") or ""))
-                                initial_imgs = [thumb_url] if thumb_url.startswith("http") else []
-                                raw_vin = str(
-                                    item.get("fv") or item.get("vin") or item.get("vn") or ""
-                                ).strip()
-                                listings_by_lot[lot_num] = VehicleListing(
-                                    source="Copart",
-                                    lot_id=lot_num,
-                                    url=lot_url,
-                                    title=title,
-                                    vin=raw_vin,
-                                    created_at=created_dt,
-                                    image_urls=initial_imgs,
-                                )
+                        results_obj = data.get("data", {}).get("results", {})
+                        total_el = results_obj.get("totalElements")
+                        if isinstance(total_el, int) and total_el > int(captured_api["total"] or 0):
+                            captured_api["total"] = total_el
+                        if not captured_api["url"] and response.request.method == "POST":
+                            captured_api["url"] = response.url
+                            captured_api["post_data"] = response.request.post_data or ""
+                            req_headers = response.request.headers
+                            captured_api["headers"] = {
+                                k: v
+                                for k, v in req_headers.items()
+                                if k.lower() in ("content-type", "x-xsrf-token", "accept")
+                            }
+                        content_list = results_obj.get("content", [])
+                        ingest_copart_items(content_list)
                     except Exception:
                         pass
 
@@ -278,26 +295,97 @@ class AuctionScraper:
             except Exception:
                 logger.debug("[Copart] Primary table selector timed out, scrolling...")
 
-            await auto_scroll(page, steps=4)
-            await human_delay(1.5, 2.5)
+            # 1. If Copart's internal search-results POST endpoint was captured and there are more results,
+            # fetch all remaining pages (up to 6 pages x 100 items) directly inside the browser session
+            total_expected = int(captured_api["total"] or 0)
+            if captured_api["url"] and captured_api["post_data"] and (total_expected == 0 or len(listings_by_lot) < total_expected):
+                try:
+                    base_payload = json.loads(str(captured_api["post_data"]))
+                    if isinstance(base_payload, dict):
+                        max_api_pages = min(6, ((total_expected or 200) + 49) // 50 + 1)
+                        for api_page in range(0, max_api_pages):
+                            if total_expected > 0 and len(listings_by_lot) >= total_expected:
+                                break
+                            payload_copy = dict(base_payload)
+                            payload_copy["page"] = api_page
+                            payload_copy["size"] = max(int(payload_copy.get("size", 50) or 50), 100)
+                            payload_copy["sort"] = ["lot_number desc"]
+                            await page.evaluate(
+                                """async ({ url, headers, bodyStr }) => {
+                                    try {
+                                        const res = await fetch(url, {
+                                            method: 'POST',
+                                            headers: headers,
+                                            body: bodyStr,
+                                            credentials: 'include'
+                                        });
+                                        return res.status;
+                                    } catch (e) {
+                                        return 0;
+                                    }
+                                }""",
+                                {
+                                    "url": captured_api["url"],
+                                    "headers": captured_api["headers"],
+                                    "bodyStr": json.dumps(payload_copy),
+                                },
+                            )
+                            await human_delay(0.8, 1.4)
+                except Exception as api_exc:
+                    logger.debug("[Copart] In-page API pagination fallback: %s", api_exc)
 
-            # Extract from DOM anchors as fallback / supplement to XHR interception
-            hrefs = await page.eval_on_selector_all(
-                'a[href*="/lot/"]',
-                "elements => elements.map(el => ({href: el.href, text: (el.innerText || '').trim()}))",
-            )
-            for item in hrefs:
-                href = item.get("href", "")
-                match = re.search(r"/lot/(\d{6,10})", href)
-                if match:
-                    lot_num = match.group(1)
-                    if lot_num not in listings_by_lot:
-                        listings_by_lot[lot_num] = VehicleListing(
-                            source="Copart",
-                            lot_id=lot_num,
-                            url=f"https://www.copart.com/lot/{lot_num}",
-                            title=item.get("text") or f"Copart Lot #{lot_num}",
-                        )
+            # 2. Also paginate through DOM pages (up to 6 pages) to capture all results when DOM paginator is used
+            for page_num in range(1, 7):
+                await auto_scroll(page, steps=4)
+                await human_delay(1.2, 2.0)
+
+                hrefs = await page.eval_on_selector_all(
+                    'a[href*="/lot/"]',
+                    "elements => elements.map(el => ({href: el.href, text: (el.innerText || '').trim()}))",
+                )
+                for item in hrefs:
+                    href = item.get("href", "")
+                    match = re.search(r"/lot/(\d{6,10})", href)
+                    if match:
+                        lot_num = match.group(1)
+                        if lot_num not in listings_by_lot:
+                            listings_by_lot[lot_num] = VehicleListing(
+                                source="Copart",
+                                lot_id=lot_num,
+                                url=f"https://www.copart.com/lot/{lot_num}",
+                                title=item.get("text") or f"Copart Lot #{lot_num}",
+                            )
+
+                total_expected = int(captured_api["total"] or 0)
+                if total_expected > 0 and len(listings_by_lot) >= total_expected:
+                    logger.info(
+                        "[Copart] Collected all %d/%d listings across search pages.",
+                        len(listings_by_lot),
+                        total_expected,
+                    )
+                    break
+
+                if page_num < 6:
+                    try:
+                        next_btn = page.locator(
+                            'button.p-paginator-next:not(.p-disabled):not([disabled]), '
+                            'a.p-paginator-next:not(.p-disabled), '
+                            '[aria-label="Next Page"]:not([disabled]):not(.p-disabled), '
+                            'li.paginate_button.next:not(.disabled) a'
+                        ).first
+                        if await next_btn.count() > 0 and await next_btn.is_visible():
+                            prev_count = len(listings_by_lot)
+                            logger.info(
+                                "[Copart] Navigating to page %d of search results (collected %d so far)...",
+                                page_num + 1,
+                                prev_count,
+                            )
+                            await next_btn.click()
+                            await human_delay(2.5, 4.0)
+                        else:
+                            break
+                    except Exception:
+                        break
         except Exception as exc:
             logger.error("[Copart] Error scraping search results: %s", exc)
         finally:
@@ -480,7 +568,7 @@ class AuctionScraper:
             except Exception:
                 logger.debug("[IAAI] Primary vehicle detail selector timed out, scrolling...")
 
-            for page_num in range(1, 3):
+            for page_num in range(1, 6):
                 await auto_scroll(page, steps=8)
                 await human_delay(1.5, 2.5)
 
@@ -533,7 +621,7 @@ class AuctionScraper:
                                 listings_by_id[lot_id].image_urls = [base_img]
 
                 # Check if a Next Page button is present and enabled on IAAI
-                if page_num < 2:
+                if page_num < 5:
                     try:
                         next_btn = page.locator(
                             'button.btn-next:not([disabled]), a[aria-label*="Next"]:not(.disabled), li.pagination-next:not(.disabled) a'

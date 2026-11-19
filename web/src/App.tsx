@@ -32,6 +32,8 @@ import {
   subscribeToNewCars,
   getUserId,
   setUserId,
+  getNotifiedCarIds,
+  saveNotifiedCarIds,
 } from "./firebase";
 
 type ActiveTab = "swipe" | "liked" | "archived" | "settings";
@@ -65,10 +67,14 @@ export default function App() {
     typeof Notification !== "undefined" && Notification.permission === "granted"
   );
 
-  // Drag / swipe gesture state
+  // Drag / swipe gesture state (for card decision)
   const [dragX, setDragX] = useState<number>(0);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const dragStartX = useRef<number | null>(null);
+
+  // Drag / swipe gesture state (for photo carousel)
+  const photoDragStartX = useRef<number | null>(null);
+  const [photoDragOffset, setPhotoDragOffset] = useState<number>(0);
 
   // Filter & Firebase Settings state
   const [userId, setUserIdState] = useState<string>(getUserId());
@@ -76,29 +82,81 @@ export default function App() {
   const [fbProjectId, setFbProjectId] = useState<string>(getSavedFirebaseCreds().projectId);
   const [fbApiKey, setFbApiKey] = useState<string>(getSavedFirebaseCreds().apiKey);
   const [saveBanner, setSaveBanner] = useState<string | null>(null);
+  const [newCarToast, setNewCarToast] = useState<string | null>(null);
 
-  const knownCarIdsRef = useRef<Set<string>>(new Set());
+  const knownCarIdsRef = useRef<Set<string>>(getNotifiedCarIds().ids);
 
-  const triggerBrowserNotification = async (car: CarListing) => {
+  const triggerBrowserNotification = async (car: CarListing, isTest = false) => {
+    const title = isTest
+      ? `🔔 Powiadomienia AI Lot Hunter aktywne!`
+      : `🚨 Nowe auto (PASS): ${car.title}`;
+    const body = `${car.source} #${car.lot_id} • ${car.color}${
+      car.is_modified ? ` • 🔥 ${car.modifications}` : ""
+    }`;
+
+    // Always show in-app toast alert when a new car arrives
+    setNewCarToast(`${title} — ${body}`);
+    setTimeout(() => setNewCarToast(null), 7000);
+
     if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
     try {
       const reg = await navigator.serviceWorker?.getRegistration();
-      const title = `🚨 Nowe auto (PASS): ${car.title}`;
-      const body = `${car.source} #${car.lot_id} • ${car.color}${
-        car.is_modified ? ` • 🔥 ${car.modifications}` : ""
-      }`;
+      const prefix = car.source.toLowerCase() === "iaai" ? "0" : "1";
+      const bidCarsUrl = `https://bid.cars/pl/lot/${prefix}-${car.lot_id}`;
+      const notifOptions: NotificationOptions & Record<string, unknown> = {
+        body,
+        icon: "/icon.svg",
+        badge: "/icon.svg",
+        tag: isTest ? `test-${Date.now()}` : `car-${car.id}`,
+        renotify: true,
+        vibrate: [200, 100, 200],
+        data: {
+          url: window.location.origin,
+          bidCarsUrl,
+        },
+      };
+      if (car.image_urls && car.image_urls[0]) {
+        notifOptions.image = car.image_urls[0];
+      }
       if (reg && "showNotification" in reg) {
-        await reg.showNotification(title, {
-          body,
-          icon: "/icon.svg",
-          data: { url: window.location.origin },
-        });
+        await reg.showNotification(title, notifOptions);
       } else {
         new Notification(title, { body, icon: "/icon.svg" });
       }
     } catch {
       // ignore
     }
+  };
+
+  const processNewCarNotifications = (
+    incomingCars: CarListing[],
+    currentSwipes: Record<string, SwipeRecord>
+  ) => {
+    const stored = getNotifiedCarIds();
+    const notifiedSet = new Set(stored.ids);
+    knownCarIdsRef.current.forEach((id) => notifiedSet.add(id));
+
+    if (!stored.initialized && knownCarIdsRef.current.size === 0) {
+      // First-ever launch on this device: mark already-swiped cars as notified,
+      // and notify if there are brand-new unswiped cars waiting!
+      const unswiped = incomingCars.filter((c) => !currentSwipes[c.id]);
+      if (unswiped.length > 0) {
+        triggerBrowserNotification(unswiped[0]);
+      }
+      incomingCars.forEach((c) => notifiedSet.add(c.id));
+    } else {
+      for (const c of incomingCars) {
+        if (!notifiedSet.has(c.id)) {
+          notifiedSet.add(c.id);
+          if (!currentSwipes[c.id]) {
+            triggerBrowserNotification(c);
+          }
+        }
+      }
+    }
+
+    knownCarIdsRef.current = notifiedSet;
+    saveNotifiedCarIds(notifiedSet);
   };
 
   const refreshData = async (silent = false) => {
@@ -109,15 +167,7 @@ export default function App() {
       loadSearchFilterConfig(),
     ]);
 
-    // Check if any brand-new car arrived for notification
-    if (knownCarIdsRef.current.size > 0) {
-      for (const c of loadedCars) {
-        if (!knownCarIdsRef.current.has(c.id)) {
-          triggerBrowserNotification(c);
-        }
-      }
-    }
-    knownCarIdsRef.current = new Set(loadedCars.map((c) => c.id));
+    processNewCarNotifications(loadedCars, loadedSwipes);
 
     setCars(loadedCars);
     setSwipes(loadedSwipes);
@@ -128,13 +178,24 @@ export default function App() {
   useEffect(() => {
     refreshData();
 
-    // Subscribe to real-time Firestore updates if configured
+    // Register Periodic Background Sync if browser supports it
+    navigator.serviceWorker?.ready
+      .then((reg) => {
+        const periodicReg = reg as ServiceWorkerRegistration & {
+          periodicSync?: { register: (tag: string, opts: { minInterval: number }) => Promise<void> };
+        };
+        periodicReg.periodicSync?.register("check-new-cars", { minInterval: 15 * 60 * 1000 }).catch(() => {});
+      })
+      .catch(() => {});
+
+    // Subscribe to real-time updates
     const unsub = subscribeToNewCars((remoteCars) => {
       setCars((prev) => {
         const map = new Map(prev.map((c) => [c.id, c]));
         for (const rc of remoteCars) {
           if (!knownCarIdsRef.current.has(rc.id)) {
             knownCarIdsRef.current.add(rc.id);
+            saveNotifiedCarIds(knownCarIdsRef.current);
             triggerBrowserNotification(rc);
           }
           map.set(rc.id, rc);
@@ -143,11 +204,21 @@ export default function App() {
       });
     });
 
-    // Poll GitHub passed_cars.json every 5 minutes for new GitHub Action runs
-    const interval = setInterval(() => refreshData(true), 5 * 60 * 1000);
+    // Poll every 45 seconds and whenever the app tab/window gains focus
+    const interval = setInterval(() => refreshData(true), 45 * 1000);
+    const onVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        refreshData(true);
+      }
+    };
+    window.addEventListener("focus", onVisibilityOrFocus);
+    document.addEventListener("visibilitychange", onVisibilityOrFocus);
+
     return () => {
       unsub();
       clearInterval(interval);
+      window.removeEventListener("focus", onVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", onVisibilityOrFocus);
     };
   }, []);
 
@@ -211,15 +282,68 @@ export default function App() {
   };
 
   const requestNotifications = async () => {
-    if (typeof Notification === "undefined") return;
+    if (typeof Notification === "undefined") {
+      setNewCarToast("Twoja przeglądarka nie obsługuje powiadomień systemowych.");
+      setTimeout(() => setNewCarToast(null), 4000);
+      return;
+    }
     const perm = await Notification.requestPermission();
     setNotifEnabled(perm === "granted");
-    if (perm === "granted" && cars[0]) {
-      triggerBrowserNotification(cars[0]);
+    if (perm === "granted") {
+      const sampleCar: CarListing = cars[0] || {
+        id: "test",
+        found_at: "Teraz",
+        source: "Copart",
+        lot_id: "TEST",
+        vin: "-",
+        title: "Powiadomienia o nowych autach są włączone!",
+        color: "Pitch Black",
+        color_approved: true,
+        is_modified: false,
+        modifications: "Brak",
+        damage_assessment: "",
+        url: window.location.origin,
+        price_check_url: window.location.origin,
+        image_urls: [],
+      };
+      triggerBrowserNotification(sampleCar, true);
+    } else {
+      setNewCarToast("Odblokuj powiadomienia dla tej strony w ustawieniach przeglądarki.");
+      setTimeout(() => setNewCarToast(null), 5000);
     }
   };
 
-  // Pointer drag handlers for Tinder card
+  // Pointer drag handlers for Photo Carousel (swiping left/right changes photos instead of card!)
+  const onPhotoPointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    photoDragStartX.current = e.clientX;
+    setPhotoDragOffset(0);
+  };
+
+  const onPhotoPointerMove = (e: React.PointerEvent) => {
+    if (photoDragStartX.current === null) return;
+    e.stopPropagation();
+    setPhotoDragOffset(e.clientX - photoDragStartX.current);
+  };
+
+  const onPhotoPointerUp = (e: React.PointerEvent, totalPhotos: number) => {
+    if (photoDragStartX.current === null) return;
+    e.stopPropagation();
+    const deltaX = e.clientX - photoDragStartX.current;
+    photoDragStartX.current = null;
+    setPhotoDragOffset(0);
+
+    if (totalPhotos <= 1) return;
+    if (deltaX < -35) {
+      // Swipe left -> next photo
+      setPhotoIdx((prev) => (prev + 1) % totalPhotos);
+    } else if (deltaX > 35) {
+      // Swipe right -> previous photo
+      setPhotoIdx((prev) => (prev - 1 + totalPhotos) % totalPhotos);
+    }
+  };
+
+  // Pointer drag handlers for Tinder card (lower part of card)
   const onPointerDown = (e: React.PointerEvent) => {
     dragStartX.current = e.clientX;
     setIsDragging(true);
@@ -300,6 +424,39 @@ export default function App() {
         </div>
       </header>
 
+      {/* Notification Permission Prompt & Live New-Car Alert Banner */}
+      {!notifEnabled && typeof Notification !== "undefined" && (
+        <div className="px-4 py-2 bg-violet-950/60 border-b border-violet-800/40 flex items-center justify-between gap-2 text-xs">
+          <span className="text-violet-200 flex items-center gap-1.5">
+            <Bell className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+            Włącz powiadomienia, gdy AI znajdzie nowe auta
+          </span>
+          <button
+            type="button"
+            onClick={requestNotifications}
+            className="px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-semibold shrink-0 transition"
+          >
+            Włącz
+          </button>
+        </div>
+      )}
+
+      {newCarToast && (
+        <div className="mx-4 mt-3 px-3.5 py-2.5 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 text-xs font-semibold flex items-center justify-between gap-2 shadow-lg">
+          <span className="leading-snug">{newCarToast}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setNewCarToast(null);
+              setActiveTab("swipe");
+            }}
+            className="text-emerald-400 hover:text-white shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto p-4 pb-24">
         {/* TAB 1: TINDER SWIPE DECK */}
@@ -368,13 +525,24 @@ export default function App() {
                         </div>
                       )}
 
-                      {/* Photo Carousel */}
-                      <div className="relative h-72 bg-zinc-950 flex items-center justify-center overflow-hidden">
+                      {/* Photo Carousel (Swipe left/right here to browse photos!) */}
+                      <div
+                        onPointerDown={onPhotoPointerDown}
+                        onPointerMove={onPhotoPointerMove}
+                        onPointerUp={(e) => onPhotoPointerUp(e, imgs.length)}
+                        onPointerCancel={(e) => onPhotoPointerUp(e, imgs.length)}
+                        onPointerLeave={(e) => onPhotoPointerUp(e, imgs.length)}
+                        className="relative h-72 bg-zinc-950 flex items-center justify-center overflow-hidden cursor-ew-resize"
+                      >
                         {activeImg ? (
                           <img
                             src={activeImg}
                             alt={currentCar.title}
                             draggable={false}
+                            style={{
+                              transform: `translateX(${Math.max(-60, Math.min(60, photoDragOffset * 0.35))}px)`,
+                              transition: photoDragStartX.current !== null ? "none" : "transform 0.18s ease-out",
+                            }}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -398,6 +566,7 @@ export default function App() {
                             {currentCar.source.toUpperCase()} #{currentCar.lot_id}
                           </span>
                           <span className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-zinc-950/80 text-zinc-300 backdrop-blur">
+                            {imgs.length > 0 ? `📷 ${photoIdx + 1}/${imgs.length} • ` : ""}
                             {currentCar.found_at}
                           </span>
                         </div>
@@ -408,20 +577,26 @@ export default function App() {
                             <button
                               type="button"
                               onPointerDown={(e) => e.stopPropagation()}
-                              onClick={() => setPhotoIdx((prev) => (prev - 1 + imgs.length) % imgs.length)}
-                              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-zinc-950/70 text-white flex items-center justify-center hover:bg-zinc-950"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPhotoIdx((prev) => (prev - 1 + imgs.length) % imgs.length);
+                              }}
+                              className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-zinc-950/75 text-white flex items-center justify-center hover:bg-zinc-950 shadow-lg"
                             >
                               <ChevronLeft className="w-5 h-5" />
                             </button>
                             <button
                               type="button"
                               onPointerDown={(e) => e.stopPropagation()}
-                              onClick={() => setPhotoIdx((prev) => (prev + 1) % imgs.length)}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-zinc-950/70 text-white flex items-center justify-center hover:bg-zinc-950"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPhotoIdx((prev) => (prev + 1) % imgs.length);
+                              }}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-zinc-950/75 text-white flex items-center justify-center hover:bg-zinc-950 shadow-lg"
                             >
                               <ChevronRight className="w-5 h-5" />
                             </button>
-                            <div className="absolute bottom-2.5 left-0 right-0 flex justify-center gap-1.5">
+                            <div className="absolute bottom-2.5 left-0 right-0 flex justify-center gap-1.5 pointer-events-none">
                               {imgs.map((_, idx) => (
                                 <span
                                   key={idx}
@@ -434,6 +609,29 @@ export default function App() {
                           </>
                         )}
                       </div>
+
+                      {/* Thumbnail Strip for instant photo switching */}
+                      {imgs.length > 1 && (
+                        <div
+                          onPointerDown={(e) => e.stopPropagation()}
+                          className="flex gap-1.5 px-3 py-2 bg-zinc-950/90 border-b border-zinc-800/80 overflow-x-auto"
+                        >
+                          {imgs.map((thumbUrl, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setPhotoIdx(idx)}
+                              className={`relative w-12 h-9 rounded-lg overflow-hidden shrink-0 border-2 transition ${
+                                idx === photoIdx
+                                  ? "border-violet-500 scale-105 opacity-100"
+                                  : "border-transparent opacity-50 hover:opacity-80"
+                              }`}
+                            >
+                              <img src={thumbUrl} alt="" draggable={false} className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
 
                       {/* Card Details */}
                       <div className="p-4 space-y-3">
