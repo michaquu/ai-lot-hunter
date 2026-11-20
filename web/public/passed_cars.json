@@ -1,5 +1,133 @@
 [
   {
+    "id": "iaai_47159053",
+    "found_at": "2026-11-20 16:45 UTC",
+    "source": "IAAI",
+    "lot_id": "47159053",
+    "vin": "2C3CDZAG7MH******",
+    "title": "2021 DODGE CHALLENGER SXT",
+    "color": "Granite Crystal Gray",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "Front bumper cover is removed exposing intact crash bar and radiator support. Hood has mild front buckling, but frame rails, suspension, and engine compartment are untouched and airbags are intact.",
+    "url": "https://www.iaai.com/VehicleDetail/47159053~US",
+    "price_check_url": "https://bid.cars/pl/lot/0-47159053",
+    "image_urls": [
+      "https://vis.iaai.com/resizer?imageKeys=47159053~SID~I1&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47159053~SID~I2&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47159053~SID~I3&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47159053~SID~I4&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47159053~SID~I5&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47159053~SID~I6&width=800&height=600"
+    ]
+  },
+  {
+    "id": "copart_76930976",
+    "found_at": "2026-11-20 16:43 UTC",
+    "source": "Copart",
+    "lot_id": "76930976",
+    "vin": "2C3CDZAG6PH******",
+    "title": "2023 DODGE CHALLENGER SXT",
+    "color": "Plum Crazy Purple",
+    "color_approved": true,
+    "is_modified": true,
+    "modifications": "Dual matte black racing stripes on hood, roof, and trunk",
+    "damage_assessment": "Front bumper cover and right fender removed/missing exposing intact bumper beam and radiator support. Airbags remain intact and damage is cosmetic/bolt-on repairable.",
+    "url": "https://www.copart.com/lot/76930976",
+    "price_check_url": "https://bid.cars/pl/lot/1-76930976",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/07aee0449637430d910c6d8fe833bf50_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/5f7c9b104ade4c118b1d1f0ee02b4c20_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/b64231148a6d447da922b5eadeaa2d69_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/e1e5c38217eb4c92bb55ba2acc63921e_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/e42effc1d1284b41b09c2dedd8e107f7_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/b8aa0723fbff479399edd0893257266f_ful.jpg"
+    ]
+  },
+  {
+    "id": "copart_77561396",
+    "found_at": "2026-11-20 16:41 UTC",
+    "source": "Copart",
+    "lot_id": "77561396",
+    "vin": "2C3CDZAG2PH******",
+    "title": "2023 DODGE CHALLENGER SXT  ",
+    "color": "Granite Gray",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "The vehicle has front-end damage with a bent hood and missing front bumper cover, but structural members and airbags are intact making it a standard repairable salvage.",
+    "url": "https://www.copart.com/lot/77561396",
+    "price_check_url": "https://bid.cars/pl/lot/1-77561396",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/lpp/1126/fc7ee37887f44da098c3e18ca590089a_ful.jpg"
+    ]
+  },
+  {
+    "id": "copart_77664646",
+    "found_at": "2026-11-20 16:40 UTC",
+    "source": "Copart",
+    "lot_id": "77664646",
+    "vin": "2C3CDZAG1KH******",
+    "title": "2019 DODGE CHALLENGER SXT",
+    "color": "Granite Gray",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "The vehicle has a dented rear quarter panel and minor body scrapes, with intact airbags and no structural or mechanical damage.",
+    "url": "https://www.copart.com/lot/77664646",
+    "price_check_url": "https://bid.cars/pl/lot/1-77664646",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/c73681b966324e7aa16aae3bd6cce0e9_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/cf34f68282b14777b2e1e2170f628ffd_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/759a54b6560c4d8fa18a133c6c288ea9_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/ea38b558721f4d51bdf7b5714a01c3aa_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/828f31d0871b4f2bb8777a820231d17e_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/03b8f550e7eb4a07891d89a16114d38f_ful.jpg"
+    ]
+  },
+  {
+    "id": "copart_77988806",
+    "found_at": "2026-11-20 16:40 UTC",
+    "source": "Copart",
+    "lot_id": "77988806",
+    "vin": "2C3CDZAG6NH******",
+    "title": "2022 DODGE CHALLENGER SXT  ",
+    "color": "Pitch Black",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "The vehicle has front-end damage with a bent hood and removed bumper cover, but the engine and structure appear intact with no airbag deployment.",
+    "url": "https://www.copart.com/lot/77988806",
+    "price_check_url": "https://bid.cars/pl/lot/1-77988806",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/lpp/1126/38b18ae35ab84c558c18bdc4441874bb_ful.jpg"
+    ]
+  },
+  {
+    "id": "copart_86893825",
+    "found_at": "2026-11-20 16:39 UTC",
+    "source": "Copart",
+    "lot_id": "86893825",
+    "vin": "2C3CDZAGXMH******",
+    "title": "2021 DODGE CHALLENGER SXT",
+    "color": "Granite Gray",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "The vehicle has localized side damage mainly concentrated on the passenger door and fender. Airbags are intact and there is no catastrophic structural or engine crushing.",
+    "url": "https://www.copart.com/lot/86893825",
+    "price_check_url": "https://bid.cars/pl/lot/1-86893825",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1025/cd9bfa6092024cd58cbc4b49ace39498_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1025/af881c37fdd74e329da1a062a655da3e_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1025/5b675fd522ab493098e2656c8b69383b_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1025/9c90b21952204e0caed85f36189e90ca_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1025/0c93e0ea94264c12a4094cc379c51f0a_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1025/ea281815a2a04241b0c27bf58a127c5a_ful.jpg"
+    ]
+  },
+  {
     "id": "iaai_47136998",
     "found_at": "2026-11-19 17:03 UTC",
     "source": "IAAI",
