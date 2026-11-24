@@ -1,5 +1,92 @@
 [
   {
+    "id": "copart_71973946",
+    "found_at": "2026-11-24 19:21 UTC",
+    "source": "Copart",
+    "lot_id": "71973946",
+    "vin": "2C3CDZJG8NH******",
+    "title": "2022 DODGE CHALLENGER GT",
+    "color": "Pitch Black",
+    "color_approved": true,
+    "is_modified": true,
+    "modifications": "Red fender hash stripes",
+    "damage_assessment": "Front-end cosmetic and bolt-on damage concentrated on the hood, front bumper cover, and driver-side headlight surround. Airbags are intact and structural frame rails remain undamaged.",
+    "url": "https://www.copart.com/lot/71973946",
+    "price_check_url": "https://bid.cars/pl/lot/1-71973946",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/84449fc0b9c74f0597e4cceed5f05cea_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/f80b0fd9aa7746d3b0fe766912580c6b_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/6dcd88d3c7124684bfdce4b2b4e68d82_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/5b3adfc2d3ad48328c2950cb507c47b0_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/6a2c0e8a774940a4a61df2625f3ca261_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/6f66331d1a2443ae82c0da46ae24f218_ful.jpg"
+    ]
+  },
+  {
+    "id": "copart_72484376",
+    "found_at": "2026-11-24 19:21 UTC",
+    "source": "Copart",
+    "lot_id": "72484376",
+    "vin": "2C3CDZAGXKH******",
+    "title": "2019 DODGE CHALLENGER SXT  ",
+    "color": "Destroyer Gray / Smoke Show",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "Front bumper cover is removed/damaged exposing the inner support area, but suspension, frame rails, and engine structure remain straight and intact. No visible airbag deployment.",
+    "url": "https://www.copart.com/lot/72484376",
+    "price_check_url": "https://bid.cars/pl/lot/1-72484376",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/lpp/1026/42289778c0984cfdbf5098e8bf52a093_ful.jpg"
+    ]
+  },
+  {
+    "id": "copart_73531876",
+    "found_at": "2026-11-24 19:17 UTC",
+    "source": "Copart",
+    "lot_id": "73531876",
+    "vin": "2C3CDZKG0PH******",
+    "title": "2023 DODGE CHALLENGER GT",
+    "color": "Granite Gray",
+    "color_approved": true,
+    "is_modified": true,
+    "modifications": "Cold air intake with cone filter, window louvers, racing stripes, custom rear spoiler/wicker bill, upgraded rear diffuser and exhaust tips",
+    "damage_assessment": "Moderate front-end collision with damage to the hood, front bumper removal, and right front fender/suspension area, but main frame rails and engine block remain intact with no deployed airbags visible.",
+    "url": "https://www.copart.com/lot/73531876",
+    "price_check_url": "https://bid.cars/pl/lot/1-73531876",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/f82a5f3c82214b15be0ac539d2405e9a_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/bb4d1cceb86345a3b3798e26e7fe53f1_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/b5a54d2e1971491dbbc7d43f8e48d866_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/0fd85327e3604c3c99c30e56de29916d_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/e965f5ba10424e34bec0e5718789b2c6_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/b36f6faf29ba4382a8b21e9b584775f5_ful.jpg"
+    ]
+  },
+  {
+    "id": "copart_77931136",
+    "found_at": "2026-11-24 19:17 UTC",
+    "source": "Copart",
+    "lot_id": "77931136",
+    "vin": "2C3CDZAG5PH******",
+    "title": "2023 DODGE CHALLENGER SXT",
+    "color": "Pitch Black",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "The vehicle has minor front-end cosmetic damage with a slight dent on the front bumper and misaligned hood latch area, but no structural frame deformation or deployed airbags are visible.",
+    "url": "https://www.copart.com/lot/77931136",
+    "price_check_url": "https://bid.cars/pl/lot/1-77931136",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/7dfe10ba35624655afa391138306099e_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/8798b482c5cc4d4ca1f0d113a088a987_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/39bcbfa81ba047c4bcb254a6c8e424c4_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/36493813019841638683ed533f4bf397_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/6ec08859f8564deab09e7af8ec566b55_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/9886569218d64935ae53f914ac82cc83_ful.jpg"
+    ]
+  },
+  {
     "id": "copart_74465186",
     "found_at": "2026-11-23 19:50 UTC",
     "source": "Copart",
