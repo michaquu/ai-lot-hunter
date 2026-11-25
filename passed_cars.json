@@ -1,5 +1,133 @@
 [
   {
+    "id": "iaai_47133781",
+    "found_at": "2026-11-25 18:27 UTC",
+    "source": "IAAI",
+    "lot_id": "47133781",
+    "vin": "2C3CDZAG8PH******",
+    "title": "2023 DODGE CHALLENGER SXT",
+    "color": "Granite Gray",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "Driver side body damage with severe scraping/denting on the door and quarter panel section. Airbags are intact and structural components/engine are unaffected, making it an ideal repairable project.",
+    "url": "https://www.iaai.com/VehicleDetail/47133781~US",
+    "price_check_url": "https://bid.cars/pl/lot/0-47133781",
+    "image_urls": [
+      "https://vis.iaai.com/resizer?imageKeys=47133781~SID~I1&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47133781~SID~I2&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47133781~SID~I3&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47133781~SID~I4&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47133781~SID~I5&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47133781~SID~I6&width=800&height=600"
+    ]
+  },
+  {
+    "id": "iaai_47204130",
+    "found_at": "2026-11-25 18:27 UTC",
+    "source": "IAAI",
+    "lot_id": "47204130",
+    "vin": "2C3CDZJG9NH******",
+    "title": "2022 DODGE CHALLENGER GT",
+    "color": "Silver",
+    "color_approved": false,
+    "is_modified": true,
+    "modifications": "Matte black hood wrap/paint, blue painted brake calipers, and blue front splitter accent guards",
+    "damage_assessment": "Minor to moderate cosmetic damage to the right rear quarter panel and bumper. Airbags are fully intact and there is no structural frame or engine damage, making it a very straightforward repairable project.",
+    "url": "https://www.iaai.com/VehicleDetail/47204130~US",
+    "price_check_url": "https://bid.cars/pl/lot/0-47204130",
+    "image_urls": [
+      "https://vis.iaai.com/resizer?imageKeys=47204130~SID~I1&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47204130~SID~I2&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47204130~SID~I3&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47204130~SID~I4&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47204130~SID~I5&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47204130~SID~I6&width=800&height=600"
+    ]
+  },
+  {
+    "id": "copart_70775256",
+    "found_at": "2026-11-25 18:27 UTC",
+    "source": "Copart",
+    "lot_id": "70775256",
+    "vin": "2C3CDZJG6MH******",
+    "title": "2021 DODGE CHALLENGER GT  ",
+    "color": "Smoke Show Gray",
+    "color_approved": true,
+    "is_modified": true,
+    "modifications": "Orange racing stripes, custom orange mirror caps, orange splitter accents, custom side badging, aftermarket wheels, red painted brake calipers",
+    "damage_assessment": "Vehicle appears in good cosmetic condition with no visible airbag deployment or severe structural frame damage. Passed color and visual modification criteria.",
+    "url": "https://www.copart.com/lot/70775256",
+    "price_check_url": "https://bid.cars/pl/lot/1-70775256",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/lpp/0926/bb0c8f0c14c743f99954a3b4124df51c_ful.jpg"
+    ]
+  },
+  {
+    "id": "copart_71071276",
+    "found_at": "2026-11-25 18:26 UTC",
+    "source": "Copart",
+    "lot_id": "71071276",
+    "vin": "2C3CDZJG8MH******",
+    "title": "2021 DODGE CHALLENGER GT",
+    "color": "Smoke Show Gray",
+    "color_approved": true,
+    "is_modified": true,
+    "modifications": "Dual racing stripes with orange accent borders, aftermarket multi-spoke wheels, orange painted brake calipers, rear spoiler wicker bill extension",
+    "damage_assessment": "Front bumper cover and right front fender removed revealing teardown state. Engine compartment and main frame rails are intact with no deployed airbags observed.",
+    "url": "https://www.copart.com/lot/71071276",
+    "price_check_url": "https://bid.cars/pl/lot/1-71071276",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/0926/2ea1bbd74b2e4a54b2a77938d8ee46a0_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/0926/e59923a194fc4962b9cd36983a7180bc_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/0926/2f7a47c583ae4160a94600c575a4d8d9_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/0926/751be45d47a945bd94945d5064b3febe_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/0926/926f58bab487406192dc32d333caf805_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/0926/5a02df84e6144bb8a9900b0a136abe35_ful.jpg"
+    ]
+  },
+  {
+    "id": "copart_71234476",
+    "found_at": "2026-11-25 18:25 UTC",
+    "source": "Copart",
+    "lot_id": "71234476",
+    "vin": "2C3CDZJG7PH******",
+    "title": "2023 DODGE CHALLENGER GT  ",
+    "color": "Granite Gray",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "Front-end collision with crushed plastic brackets, dislodged headlights, and buckled hood tip. The radiator support is intact, engine is untouched, wheels are straight, and no airbags appear deployed.",
+    "url": "https://www.copart.com/lot/71234476",
+    "price_check_url": "https://bid.cars/pl/lot/1-71234476",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/lpp/1026/dcfca8fc30ca45e091209a9bc18ff7ee_ful.jpg"
+    ]
+  },
+  {
+    "id": "copart_71727966",
+    "found_at": "2026-11-25 18:24 UTC",
+    "source": "Copart",
+    "lot_id": "71727966",
+    "vin": "2C3CDZAGXLH******",
+    "title": "2020 DODGE CHALLENGER SXT",
+    "color": "Granite Gray",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "Front bumper cover removed exposing crash bar with minor hood buckling, and moderate dent on right rear quarter panel. Frame structure and wheels remain straight, making this easily repairable body damage.",
+    "url": "https://www.copart.com/lot/71727966",
+    "price_check_url": "https://bid.cars/pl/lot/1-71727966",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/f77a3b265bf64d34b2de41595891870e_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/e16b905b0bc64e6780370cb60e5e0f5a_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/f193fb272cf84d959b3ad89e1ea6eae2_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/2020704bfe8940b0b1f300247fd45718_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/3ff2cccee6d849859983bd387f8c93ef_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1026/ec638bc61c4e48999821a76cae202d1d_ful.jpg"
+    ]
+  },
+  {
     "id": "copart_71973946",
     "found_at": "2026-11-24 19:21 UTC",
     "source": "Copart",
