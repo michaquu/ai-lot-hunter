@@ -1,5 +1,51 @@
 [
   {
+    "id": "iaai_47209886",
+    "found_at": "2026-11-26 18:04 UTC",
+    "source": "IAAI",
+    "lot_id": "47209886",
+    "vin": "2C3CDZAGXPH******",
+    "title": "2023 DODGE CHALLENGER SXT",
+    "color": "Granite Gray / Silver",
+    "color_approved": true,
+    "is_modified": false,
+    "modifications": "Brak (seria)",
+    "damage_assessment": "Moderate front-end damage with missing bumper cover and minor hood/fender deformation. Airbags are intact, and there is no structural or beam damage.",
+    "url": "https://www.iaai.com/VehicleDetail/47209886~US",
+    "price_check_url": "https://bid.cars/pl/lot/0-47209886",
+    "image_urls": [
+      "https://vis.iaai.com/resizer?imageKeys=47209886~SID~I1&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47209886~SID~I2&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47209886~SID~I3&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47209886~SID~I4&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47209886~SID~I5&width=800&height=600",
+      "https://vis.iaai.com/resizer?imageKeys=47209886~SID~I6&width=800&height=600"
+    ]
+  },
+  {
+    "id": "copart_78490166",
+    "found_at": "2026-11-26 18:04 UTC",
+    "source": "Copart",
+    "lot_id": "78490166",
+    "vin": "2C3CDZAG1MH******",
+    "title": "2021 DODGE CHALLENGER SXT",
+    "color": "F8Green",
+    "color_approved": false,
+    "is_modified": true,
+    "modifications": "Custom geometric rear quarter panel wrap/decals, dual-snorkel hood",
+    "damage_assessment": "The vehicle has minor front bumper corner damage and side body scratches/dents, with no deployed airbags and no structural frame damage. It passes due to visible aftermarket styling modifications (decals and hood).",
+    "url": "https://www.copart.com/lot/78490166",
+    "price_check_url": "https://bid.cars/pl/lot/1-78490166",
+    "image_urls": [
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/7770d39e70a5430db9c7f8155519a2fd_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/68031ae077ef4aa6ab7b8937c020e13b_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/85ec1de9e5874eedb6d84a3da937e378_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/3fdcba9849504b35afc1d2fe50773cf3_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/46f74c68e8d24c109cd41587180560ad_ful.jpg",
+      "https://cs.copart.com/v1/AUTH_svc.pdoc00001/ids-c-prod-lpp/1126/d8774a0d0620437caadf07b7a261ec2e_ful.jpg"
+    ]
+  },
+  {
     "id": "iaai_47133781",
     "found_at": "2026-11-25 18:27 UTC",
     "source": "IAAI",
